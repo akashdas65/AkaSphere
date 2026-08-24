@@ -6,7 +6,7 @@ from sqlalchemy import pool
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models import User
+from app.models import User, Workspace, WorkspaceMember
 
 
 # Alembic Config object
@@ -23,7 +23,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
+    """Run migrations in offline mode."""
 
     url = settings.database_url
 
@@ -41,7 +41,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
+    """Run migrations in online mode."""
 
     configuration = config.get_section(
         config.config_ini_section,

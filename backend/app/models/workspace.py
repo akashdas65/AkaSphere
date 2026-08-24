@@ -1,14 +1,13 @@
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 
-class User(Base):
-
-    __tablename__ = "users"
+class Workspace(Base):
+    __tablename__ = "workspaces"
 
     id: Mapped[str] = mapped_column(
         String(36),
@@ -16,28 +15,28 @@ class User(Base):
         default=lambda: str(uuid4()),
     )
 
-    email: Mapped[str] = mapped_column(
-        String(255),
-        unique=True,
-        index=True,
-        nullable=False,
-    )
-
-    username: Mapped[str] = mapped_column(
-        String(50),
-        unique=True,
-        index=True,
-        nullable=False,
-    )
-
-    full_name: Mapped[str | None] = mapped_column(
+    name: Mapped[str] = mapped_column(
         String(100),
+        nullable=False,
+    )
+
+    slug: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        String(500),
         nullable=True,
     )
 
-    hashed_password: Mapped[str] = mapped_column(
-        String(255),
+    owner_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -46,47 +45,38 @@ class User(Base):
         nullable=False,
     )
 
-    is_verified: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-    )
-
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
-        default=func.now(),
         server_default=func.now(),
         nullable=False,
     )
 
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
-        default=func.now(),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
     )
 
-    owned_workspaces = relationship(
-        "Workspace",
-        back_populates="owner",
-        cascade="all, delete-orphan",
+    owner = relationship(
+        "User",
+        back_populates="owned_workspaces",
     )
 
-    workspace_memberships = relationship(
+    members = relationship(
         "WorkspaceMember",
-        back_populates="user",
+        back_populates="workspace",
         cascade="all, delete-orphan",
     )
 
-    messages = relationship(
-        "Message",
-        back_populates="user",
+    invitations = relationship(
+        "WorkspaceInvitation",
+        back_populates="workspace",
         cascade="all, delete-orphan",
     )
 
-    message_reactions = relationship(
-        "MessageReaction",
-        back_populates="user",
+    channels = relationship(
+        "Channel",
+        back_populates="workspace",
         cascade="all, delete-orphan",
     )
