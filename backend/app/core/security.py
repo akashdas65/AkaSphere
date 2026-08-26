@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 from jose import JWTError, jwt
 from pwdlib import PasswordHash
@@ -55,7 +56,7 @@ def create_refresh_token(
     subject: str,
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Create a long-lived JWT refresh token."""
+    """Create a long-lived JWT refresh token with a unique JWT ID."""
 
     if expires_delta is None:
         expires_delta = timedelta(
@@ -67,6 +68,7 @@ def create_refresh_token(
     payload = {
         "sub": subject,
         "type": "refresh",
+        "jti": str(uuid4()),
         "exp": expire,
     }
 
