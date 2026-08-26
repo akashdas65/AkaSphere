@@ -36,7 +36,6 @@ def register(
     data: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> UserResponse:
-
     service = AuthService(db)
 
     try:
@@ -60,12 +59,11 @@ def login(
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> AuthTokens:
-
     service = AuthService(db)
 
     try:
         user, tokens = service.login(
-            email=str(data.email),
+            email=str(data.email).lower(),
             password=data.password,
         )
 
@@ -74,7 +72,7 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(exc),
             headers={
-                "WWW-Authenticate": "Bearer"
+                "WWW-Authenticate": "Bearer",
             },
         ) from exc
 
@@ -96,7 +94,6 @@ def refresh(
     data: RefreshTokenRequest,
     redis_client=Depends(get_redis),
 ) -> AuthTokens:
-
     token_service = TokenService(redis_client)
 
     try:
@@ -119,7 +116,6 @@ def logout(
     data: RefreshTokenRequest,
     redis_client=Depends(get_redis),
 ) -> None:
-
     TokenService(
         redis_client
     ).revoke_refresh_token(
@@ -129,16 +125,17 @@ def logout(
     return None
 
 
-@router.post("/send-otp")
+@router.post(
+    "/send-otp",
+)
 def send_otp(
     data: OTPRequest,
     redis_client=Depends(get_redis),
 ) -> dict:
-
     otp_service = OTPService(redis_client)
 
     otp = otp_service.create_otp(
-        str(data.email)
+        str(data.email).lower()
     )
 
     return {
@@ -148,17 +145,20 @@ def send_otp(
     }
 
 
-@router.post("/verify-otp")
+@router.post(
+    "/verify-otp",
+)
 def verify_otp(
     data: VerifyOTPRequest,
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> dict:
-
     otp_service = OTPService(redis_client)
 
+    email = str(data.email).lower()
+
     if not otp_service.verify_otp(
-        email=str(data.email),
+        email=email,
         otp=data.otp,
     ):
         raise HTTPException(
@@ -168,9 +168,7 @@ def verify_otp(
 
     repository = UserRepository(db)
 
-    user = repository.get_by_email(
-        str(data.email).lower()
-    )
+    user = repository.get_by_email(email)
 
     if user is None:
         raise HTTPException(
@@ -187,31 +185,30 @@ def verify_otp(
     }
 
 
-@router.post("/forgot-password")
+@router.post(
+    "/forgot-password",
+)
 def forgot_password(
     data: ForgotPasswordRequest,
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> dict:
-
     repository = UserRepository(db)
 
-    user = repository.get_by_email(
-        str(data.email).lower()
-    )
+    email = str(data.email).lower()
 
-    # Same response whether email exists or not.
+    user = repository.get_by_email(email)
+
+    # Same response whether the email exists or not.
     # This prevents user enumeration.
     if user is not None:
         otp_service = OTPService(redis_client)
 
-        otp = otp_service.create_otp(
-            str(data.email)
-        )
+        otp = otp_service.create_otp(email)
 
         # Development only.
         print(
-            f"Password reset OTP for {data.email}: {otp}"
+            f"Password reset OTP for {email}: {otp}"
         )
 
     return {
@@ -222,17 +219,20 @@ def forgot_password(
     }
 
 
-@router.post("/reset-password")
+@router.post(
+    "/reset-password",
+)
 def reset_password(
     data: ResetPasswordRequest,
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> dict:
-
     otp_service = OTPService(redis_client)
 
+    email = str(data.email).lower()
+
     if not otp_service.verify_otp(
-        email=str(data.email),
+        email=email,
         otp=data.otp,
     ):
         raise HTTPException(
@@ -242,9 +242,7 @@ def reset_password(
 
     repository = UserRepository(db)
 
-    user = repository.get_by_email(
-        str(data.email).lower()
-    )
+    user = repository.get_by_email(email)
 
     if user is None:
         raise HTTPException(
@@ -258,7 +256,7 @@ def reset_password(
     )
 
     return {
-        "message": "Password reset successfully"
+        "message": "Password reset successfully",
     }
 
 
@@ -267,12 +265,9 @@ def reset_password(
     response_model=UserResponse,
 )
 def get_me(
-    user_id: str = Depends(
-        get_current_user_id
-    ),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> UserResponse:
-
     repository = UserRepository(db)
 
     user = repository.get_by_id(user_id)
