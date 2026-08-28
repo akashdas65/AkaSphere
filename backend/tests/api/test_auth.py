@@ -8,48 +8,20 @@ from app.main import app
 client = TestClient(app)
 
 
-TEST_EMAIL = "authtest@example.com"
-TEST_USERNAME = "authtestuser"
 TEST_PASSWORD = "TestPassword123"
 NEW_PASSWORD = "NewTestPassword123"
 
 
-def register_test_user():
+def create_test_user():
     """
-    Create the shared authentication test user if it does not already exist.
+    Create a unique test user.
+    This prevents tests from depending on database state
+    created by previous test runs.
     """
-    response = client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": TEST_EMAIL,
-            "username": TEST_USERNAME,
-            "full_name": "Auth Test User",
-            "password": TEST_PASSWORD,
-        },
-    )
+    suffix = uuid4().hex[:8]
 
-    assert response.status_code in (201, 409)
-
-
-def login(
-    email: str = TEST_EMAIL,
-    password: str = TEST_PASSWORD,
-):
-    """
-    Login helper used by authentication tests.
-    """
-    return client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": email,
-            "password": password,
-        },
-    )
-
-
-def test_register_success():
-    email = f"authtest_{uuid4().hex[:8]}@example.com"
-    username = f"authtest_{uuid4().hex[:8]}"
+    email = f"authtest_{suffix}@example.com"
+    username = f"authtest_{suffix}"
 
     response = client.post(
         "/api/v1/auth/register",
@@ -59,6 +31,59 @@ def test_register_success():
             "full_name": "Auth Test User",
             "password": TEST_PASSWORD,
         },
+    )
+
+    assert response.status_code == 201
+
+    return {
+        "email": email,
+        "username": username,
+    }
+
+
+def register_user(
+    email: str,
+    username: str,
+    password: str = TEST_PASSWORD,
+):
+    return client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "username": username,
+            "full_name": "Auth Test User",
+            "password": password,
+        },
+    )
+
+
+def login(
+    email: str,
+    password: str = TEST_PASSWORD,
+):
+    return client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": email,
+            "password": password,
+        },
+    )
+
+
+# ============================================================
+# REGISTER
+# ============================================================
+
+
+def test_register_success():
+    suffix = uuid4().hex[:8]
+
+    email = f"register_{suffix}@example.com"
+    username = f"register_{suffix}"
+
+    response = register_user(
+        email=email,
+        username=username,
     )
 
     assert response.status_code == 201
@@ -73,16 +98,11 @@ def test_register_success():
 
 
 def test_register_duplicate_email():
-    register_test_user()
+    user = create_test_user()
 
-    response = client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": TEST_EMAIL,
-            "username": "anotheruser",
-            "full_name": "Another User",
-            "password": TEST_PASSWORD,
-        },
+    response = register_user(
+        email=user["email"],
+        username=f"another_{uuid4().hex[:8]}",
     )
 
     assert response.status_code == 409
@@ -93,7 +113,7 @@ def test_register_invalid_email():
         "/api/v1/auth/register",
         json={
             "email": "not-an-email",
-            "username": "invalidemailuser",
+            "username": f"invalid_{uuid4().hex[:8]}",
             "full_name": "Invalid Email",
             "password": TEST_PASSWORD,
         },
@@ -103,11 +123,13 @@ def test_register_invalid_email():
 
 
 def test_register_short_password():
+    suffix = uuid4().hex[:8]
+
     response = client.post(
         "/api/v1/auth/register",
         json={
-            "email": "shortpass@example.com",
-            "username": "shortpassuser",
+            "email": f"shortpass_{suffix}@example.com",
+            "username": f"shortpass_{suffix}",
             "full_name": "Short Password",
             "password": "123",
         },
@@ -116,10 +138,17 @@ def test_register_short_password():
     assert response.status_code == 422
 
 
-def test_login_success():
-    register_test_user()
+# ============================================================
+# LOGIN
+# ============================================================
 
-    response = login()
+
+def test_login_success():
+    user = create_test_user()
+
+    response = login(
+        email=user["email"],
+    )
 
     assert response.status_code == 200
 
@@ -131,9 +160,10 @@ def test_login_success():
 
 
 def test_login_wrong_password():
-    register_test_user()
+    user = create_test_user()
 
     response = login(
+        email=user["email"],
         password="WrongPassword123",
     )
 
@@ -142,7 +172,7 @@ def test_login_wrong_password():
 
 def test_login_nonexistent_user():
     response = login(
-        email="doesnotexist@example.com",
+        email=f"doesnotexist_{uuid4().hex[:8]}@example.com",
         password=TEST_PASSWORD,
     )
 
@@ -161,10 +191,17 @@ def test_login_invalid_email():
     assert response.status_code == 422
 
 
-def test_get_me_with_valid_token():
-    register_test_user()
+# ============================================================
+# GET ME
+# ============================================================
 
-    login_response = login()
+
+def test_get_me_with_valid_token():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
 
     assert login_response.status_code == 200
 
@@ -181,8 +218,8 @@ def test_get_me_with_valid_token():
 
     data = response.json()
 
-    assert data["email"] == TEST_EMAIL
-    assert data["username"] == TEST_USERNAME
+    assert data["email"] == user["email"]
+    assert data["username"] == user["username"]
 
 
 def test_get_me_without_token():
@@ -204,10 +241,17 @@ def test_get_me_with_invalid_token():
     assert response.status_code == 401
 
 
-def test_refresh_token_success():
-    register_test_user()
+# ============================================================
+# REFRESH TOKEN
+# ============================================================
 
-    login_response = login()
+
+def test_refresh_token_success():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
 
     assert login_response.status_code == 200
 
@@ -229,7 +273,6 @@ def test_refresh_token_success():
     assert "refresh_token" in new_tokens
     assert new_tokens["token_type"] == "bearer"
 
-    # Refresh-token rotation.
     assert new_tokens["refresh_token"] != refresh_token
 
 
@@ -244,10 +287,17 @@ def test_refresh_token_invalid():
     assert response.status_code == 401
 
 
-def test_logout_success():
-    register_test_user()
+# ============================================================
+# LOGOUT
+# ============================================================
 
-    login_response = login()
+
+def test_logout_success():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
 
     assert login_response.status_code == 200
 
@@ -264,9 +314,11 @@ def test_logout_success():
 
 
 def test_refresh_token_after_logout():
-    register_test_user()
+    user = create_test_user()
 
-    login_response = login()
+    login_response = login(
+        email=user["email"],
+    )
 
     assert login_response.status_code == 200
 
@@ -291,13 +343,18 @@ def test_refresh_token_after_logout():
     assert refresh_response.status_code == 401
 
 
+# ============================================================
+# SEND OTP
+# ============================================================
+
+
 def test_send_otp_success():
-    register_test_user()
+    user = create_test_user()
 
     response = client.post(
         "/api/v1/auth/send-otp",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
         },
     )
 
@@ -323,13 +380,18 @@ def test_send_otp_invalid_email():
     assert response.status_code == 422
 
 
+# ============================================================
+# VERIFY OTP
+# ============================================================
+
+
 def test_verify_otp_success():
-    register_test_user()
+    user = create_test_user()
 
     send_response = client.post(
         "/api/v1/auth/send-otp",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
         },
     )
 
@@ -340,7 +402,7 @@ def test_verify_otp_success():
     response = client.post(
         "/api/v1/auth/verify-otp",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
             "otp": otp,
         },
     )
@@ -350,17 +412,17 @@ def test_verify_otp_success():
     data = response.json()
 
     assert data["message"] == "Email verified successfully"
-    assert data["email"] == TEST_EMAIL
+    assert data["email"] == user["email"]
     assert data["is_verified"] is True
 
 
 def test_verify_otp_invalid():
-    register_test_user()
+    user = create_test_user()
 
     response = client.post(
         "/api/v1/auth/verify-otp",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
             "otp": "000000",
         },
     )
@@ -369,10 +431,12 @@ def test_verify_otp_invalid():
 
 
 def test_verify_otp_invalid_format():
+    user = create_test_user()
+
     response = client.post(
         "/api/v1/auth/verify-otp",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
             "otp": "123",
         },
     )
@@ -380,13 +444,18 @@ def test_verify_otp_invalid_format():
     assert response.status_code == 422
 
 
+# ============================================================
+# FORGOT PASSWORD
+# ============================================================
+
+
 def test_forgot_password_success():
-    register_test_user()
+    user = create_test_user()
 
     response = client.post(
         "/api/v1/auth/forgot-password",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
         },
     )
 
@@ -404,7 +473,7 @@ def test_forgot_password_nonexistent_email():
     response = client.post(
         "/api/v1/auth/forgot-password",
         json={
-            "email": "doesnotexist@example.com",
+            "email": f"doesnotexist_{uuid4().hex[:8]}@example.com",
         },
     )
 
@@ -412,20 +481,24 @@ def test_forgot_password_nonexistent_email():
 
     data = response.json()
 
-    # Same response prevents user enumeration.
     assert (
         data["message"]
         == "If the email exists, a password reset OTP has been sent."
     )
 
 
+# ============================================================
+# RESET PASSWORD
+# ============================================================
+
+
 def test_reset_password_success():
-    register_test_user()
+    user = create_test_user()
 
     send_response = client.post(
         "/api/v1/auth/send-otp",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
         },
     )
 
@@ -436,7 +509,7 @@ def test_reset_password_success():
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
             "otp": otp,
             "new_password": NEW_PASSWORD,
         },
@@ -450,7 +523,32 @@ def test_reset_password_success():
 
 
 def test_login_with_new_password_after_reset():
+    user = create_test_user()
+
+    send_response = client.post(
+        "/api/v1/auth/send-otp",
+        json={
+            "email": user["email"],
+        },
+    )
+
+    assert send_response.status_code == 200
+
+    otp = send_response.json()["otp"]
+
+    reset_response = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "email": user["email"],
+            "otp": otp,
+            "new_password": NEW_PASSWORD,
+        },
+    )
+
+    assert reset_response.status_code == 200
+
     response = login(
+        email=user["email"],
         password=NEW_PASSWORD,
     )
 
@@ -464,7 +562,32 @@ def test_login_with_new_password_after_reset():
 
 
 def test_login_with_old_password_after_reset():
+    user = create_test_user()
+
+    send_response = client.post(
+        "/api/v1/auth/send-otp",
+        json={
+            "email": user["email"],
+        },
+    )
+
+    assert send_response.status_code == 200
+
+    otp = send_response.json()["otp"]
+
+    reset_response = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "email": user["email"],
+            "otp": otp,
+            "new_password": NEW_PASSWORD,
+        },
+    )
+
+    assert reset_response.status_code == 200
+
     response = login(
+        email=user["email"],
         password=TEST_PASSWORD,
     )
 
@@ -472,10 +595,12 @@ def test_login_with_old_password_after_reset():
 
 
 def test_reset_password_invalid_otp():
+    user = create_test_user()
+
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
             "otp": "000000",
             "new_password": "AnotherPassword123",
         },
@@ -488,7 +613,7 @@ def test_reset_password_invalid_email():
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "email": "doesnotexist@example.com",
+            "email": f"doesnotexist_{uuid4().hex[:8]}@example.com",
             "otp": "000000",
             "new_password": "AnotherPassword123",
         },
@@ -498,10 +623,12 @@ def test_reset_password_invalid_email():
 
 
 def test_reset_password_short_password():
+    user = create_test_user()
+
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "email": TEST_EMAIL,
+            "email": user["email"],
             "otp": "123",
             "new_password": "short",
         },

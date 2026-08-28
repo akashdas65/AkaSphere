@@ -22,11 +22,13 @@ def authenticate_websocket(
     """
     Authenticate a WebSocket connection using a JWT access token.
 
-    Supported format:
+    Expected format:
 
         /ws/channels/{channel_id}?token=<access_token>
 
-    Returns the authenticated user ID or None when authentication fails.
+    Returns:
+        User ID if authentication succeeds.
+        None if authentication fails.
     """
 
     token = websocket.query_params.get("token")
@@ -56,17 +58,24 @@ def authenticate_websocket(
 async def channel_websocket(
     websocket: WebSocket,
     channel_id: str,
-):
+) -> None:
+    """
+    Real-time WebSocket connection for a channel.
+    """
+
     db: Session = SessionLocal()
+
+    user_id: str | None = None
+    connected = False
 
     try:
         # ---------------------------------------------------------
-        # 1. Authenticate user using JWT
+        # 1. Authenticate user
         # ---------------------------------------------------------
 
         user_id = authenticate_websocket(websocket)
 
-        if not user_id:
+        if user_id is None:
             await websocket.close(
                 code=1008,
                 reason="Authentication required",
@@ -81,7 +90,7 @@ async def channel_websocket(
         message_repository = MessageRepository(db)
 
         # ---------------------------------------------------------
-        # 3. Check channel
+        # 3. Load channel
         # ---------------------------------------------------------
 
         from app.models.channel import Channel
@@ -115,7 +124,7 @@ async def channel_websocket(
             return
 
         # ---------------------------------------------------------
-        # 5. Private channel access
+        # 5. Check private channel access
         # ---------------------------------------------------------
 
         if channel.is_private and membership.role not in (
@@ -129,7 +138,7 @@ async def channel_websocket(
             return
 
         # ---------------------------------------------------------
-        # 6. Register WebSocket connection
+        # 6. Accept and register connection
         # ---------------------------------------------------------
 
         await connection_manager.connect(
@@ -137,8 +146,10 @@ async def channel_websocket(
             websocket,
         )
 
+        connected = True
+
         # ---------------------------------------------------------
-        # 7. Notify channel that user joined
+        # 7. Notify other users
         # ---------------------------------------------------------
 
         await connection_manager.broadcast(
@@ -160,7 +171,7 @@ async def channel_websocket(
             data = await websocket.receive_json()
 
             # -----------------------------------------------------
-            # Validate incoming payload
+            # Validate payload
             # -----------------------------------------------------
 
             if not isinstance(data, dict):
@@ -172,10 +183,11 @@ async def channel_websocket(
                 )
                 continue
 
-            content = data.get(
-                "content",
-                "",
-            )
+            content = data.get("content", "")
+
+            # -----------------------------------------------------
+            # Validate content type
+            # -----------------------------------------------------
 
             if not isinstance(content, str):
                 await websocket.send_json(
@@ -186,7 +198,15 @@ async def channel_websocket(
                 )
                 continue
 
+            # -----------------------------------------------------
+            # Remove unnecessary whitespace
+            # -----------------------------------------------------
+
             content = content.strip()
+
+            # -----------------------------------------------------
+            # Empty message validation
+            # -----------------------------------------------------
 
             if not content:
                 await websocket.send_json(
@@ -197,17 +217,24 @@ async def channel_websocket(
                 )
                 continue
 
+            # -----------------------------------------------------
+            # Maximum message length
+            # -----------------------------------------------------
+
             if len(content) > 5000:
                 await websocket.send_json(
                     {
                         "type": "error",
-                        "message": "Message content cannot exceed 5000 characters",
+                        "message": (
+                            "Message content cannot exceed "
+                            "5000 characters"
+                        ),
                     }
                 )
                 continue
 
             # -----------------------------------------------------
-            # Save message to PostgreSQL
+            # 9. Save message to PostgreSQL
             # -----------------------------------------------------
 
             saved_message = message_repository.create(
@@ -217,14 +244,14 @@ async def channel_websocket(
             )
 
             # -----------------------------------------------------
-            # Build broadcast payload
+            # 10. Build real-time message payload
             # -----------------------------------------------------
 
             message = {
                 "type": "message",
                 "id": saved_message.id,
-                "user_id": saved_message.user_id,
                 "channel_id": saved_message.channel_id,
+                "user_id": saved_message.user_id,
                 "content": saved_message.content,
                 "is_edited": saved_message.is_edited,
                 "created_at": (
@@ -240,7 +267,7 @@ async def channel_websocket(
             }
 
             # -----------------------------------------------------
-            # Broadcast message to everyone in channel
+            # 11. Broadcast message to everyone
             # -----------------------------------------------------
 
             await connection_manager.broadcast(
@@ -248,28 +275,45 @@ async def channel_websocket(
                 message,
             )
 
-    except WebSocketDisconnect:
-        connection_manager.disconnect(
-            channel_id,
-            websocket,
-        )
+    # -------------------------------------------------------------
+    # Client disconnected
+    # -------------------------------------------------------------
 
-        await connection_manager.broadcast(
-            channel_id,
-            {
-                "type": "system",
-                "event": "user_left",
-                "message": "User left the channel",
-                "user_id": user_id if "user_id" in locals() else None,
-                "channel_id": channel_id,
-            },
-        )
+    except WebSocketDisconnect:
+        pass
+
+    # -------------------------------------------------------------
+    # Unexpected WebSocket error
+    # -------------------------------------------------------------
 
     except Exception:
-        connection_manager.disconnect(
-            channel_id,
-            websocket,
-        )
+        # Do not expose internal errors to the client.
+        pass
+
+    # -------------------------------------------------------------
+    # Cleanup
+    # -------------------------------------------------------------
 
     finally:
+        if connected:
+            connection_manager.disconnect(
+                channel_id,
+                websocket,
+            )
+
+            # Notify remaining users.
+            try:
+                await connection_manager.broadcast(
+                    channel_id,
+                    {
+                        "type": "system",
+                        "event": "user_left",
+                        "message": "User left the channel",
+                        "user_id": user_id,
+                        "channel_id": channel_id,
+                    },
+                )
+            except Exception:
+                pass
+
         db.close()
