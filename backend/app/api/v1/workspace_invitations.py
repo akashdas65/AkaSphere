@@ -204,7 +204,10 @@ def accept_invitation(
             detail="User is already a member of this workspace",
         )
 
-    member_repository.create(
+    # Add the invited user to the workspace.
+    # WorkspaceMemberRepository exposes add_member(),
+    # not create().
+    member_repository.add_member(
         workspace_id=invitation.workspace_id,
         user_id=user_id,
         role=invitation.role,

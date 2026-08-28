@@ -17,30 +17,27 @@ class ChannelCreate(BaseModel):
 
     description: str | None = Field(
         default=None,
-        max_length=1000,
+        max_length=500,
     )
 
     is_private: bool = False
 
 
 class ChannelUpdate(BaseModel):
-    name: str = Field(
+    name: str | None = Field(
+        default=None,
         min_length=2,
         max_length=100,
     )
 
     description: str | None = Field(
         default=None,
-        max_length=1000,
+        max_length=500,
     )
-
-    is_private: bool = False
 
 
 class ChannelResponse(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     id: str
     workspace_id: str

@@ -5,6 +5,7 @@ from app.models.channel import Channel
 
 
 class ChannelRepository:
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -76,14 +77,15 @@ class ChannelRepository:
     def update(
         self,
         channel: Channel,
-        name: str,
-        description: str | None,
-        is_private: bool,
+        name: str | None = None,
+        description: str | None = None,
     ) -> Channel:
 
-        channel.name = name
-        channel.description = description
-        channel.is_private = is_private
+        if name is not None:
+            channel.name = name
+
+        if description is not None:
+            channel.description = description
 
         self.db.commit()
         self.db.refresh(channel)

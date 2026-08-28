@@ -5,6 +5,7 @@ from app.models.message import Message
 
 
 class MessageRepository:
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -22,6 +23,7 @@ class MessageRepository:
     def get_channel_messages(
         self,
         channel_id: str,
+        limit: int = 50,
     ) -> list[Message]:
 
         statement = (
@@ -30,13 +32,18 @@ class MessageRepository:
                 Message.channel_id == channel_id,
             )
             .order_by(
-                Message.created_at.asc()
+                Message.created_at.desc()
             )
+            .limit(limit)
         )
 
-        return list(
+        messages = list(
             self.db.scalars(statement).all()
         )
+
+        messages.reverse()
+
+        return messages
 
     def create(
         self,

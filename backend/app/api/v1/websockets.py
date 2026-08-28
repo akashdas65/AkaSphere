@@ -1,6 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
+from app.core.security import decode_token
 from app.db.session import SessionLocal
 from app.repositories.message_repository import MessageRepository
 from app.repositories.workspace_member_repository import (
@@ -15,6 +16,40 @@ router = APIRouter(
 )
 
 
+def authenticate_websocket(
+    websocket: WebSocket,
+) -> str | None:
+    """
+    Authenticate a WebSocket connection using a JWT access token.
+
+    Supported format:
+
+        /ws/channels/{channel_id}?token=<access_token>
+
+    Returns the authenticated user ID or None when authentication fails.
+    """
+
+    token = websocket.query_params.get("token")
+
+    if not token:
+        return None
+
+    try:
+        payload = decode_token(token)
+    except ValueError:
+        return None
+
+    if payload.get("type") != "access":
+        return None
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+        return None
+
+    return str(user_id)
+
+
 @router.websocket(
     "/channels/{channel_id}"
 )
@@ -25,9 +60,11 @@ async def channel_websocket(
     db: Session = SessionLocal()
 
     try:
-        user_id = websocket.query_params.get(
-            "user_id"
-        )
+        # ---------------------------------------------------------
+        # 1. Authenticate user using JWT
+        # ---------------------------------------------------------
+
+        user_id = authenticate_websocket(websocket)
 
         if not user_id:
             await websocket.close(
@@ -36,13 +73,16 @@ async def channel_websocket(
             )
             return
 
-        member_repository = WorkspaceMemberRepository(
-            db
-        )
+        # ---------------------------------------------------------
+        # 2. Load repositories
+        # ---------------------------------------------------------
 
-        message_repository = MessageRepository(
-            db
-        )
+        member_repository = WorkspaceMemberRepository(db)
+        message_repository = MessageRepository(db)
+
+        # ---------------------------------------------------------
+        # 3. Check channel
+        # ---------------------------------------------------------
 
         from app.models.channel import Channel
 
@@ -58,6 +98,10 @@ async def channel_websocket(
             )
             return
 
+        # ---------------------------------------------------------
+        # 4. Check workspace membership
+        # ---------------------------------------------------------
+
         membership = member_repository.get_membership(
             channel.workspace_id,
             user_id,
@@ -70,27 +114,77 @@ async def channel_websocket(
             )
             return
 
+        # ---------------------------------------------------------
+        # 5. Private channel access
+        # ---------------------------------------------------------
+
+        if channel.is_private and membership.role not in (
+            "owner",
+            "admin",
+        ):
+            await websocket.close(
+                code=1008,
+                reason="You do not have access to this private channel",
+            )
+            return
+
+        # ---------------------------------------------------------
+        # 6. Register WebSocket connection
+        # ---------------------------------------------------------
+
         await connection_manager.connect(
             channel_id,
             websocket,
         )
 
+        # ---------------------------------------------------------
+        # 7. Notify channel that user joined
+        # ---------------------------------------------------------
+
         await connection_manager.broadcast(
             channel_id,
             {
                 "type": "system",
+                "event": "user_joined",
                 "message": "User joined the channel",
                 "user_id": user_id,
+                "channel_id": channel_id,
             },
         )
 
+        # ---------------------------------------------------------
+        # 8. Receive messages
+        # ---------------------------------------------------------
+
         while True:
             data = await websocket.receive_json()
+
+            # -----------------------------------------------------
+            # Validate incoming payload
+            # -----------------------------------------------------
+
+            if not isinstance(data, dict):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Invalid message payload",
+                    }
+                )
+                continue
 
             content = data.get(
                 "content",
                 "",
             )
+
+            if not isinstance(content, str):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Message content must be a string",
+                    }
+                )
+                continue
 
             content = content.strip()
 
@@ -103,11 +197,28 @@ async def channel_websocket(
                 )
                 continue
 
+            if len(content) > 5000:
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Message content cannot exceed 5000 characters",
+                    }
+                )
+                continue
+
+            # -----------------------------------------------------
+            # Save message to PostgreSQL
+            # -----------------------------------------------------
+
             saved_message = message_repository.create(
                 channel_id=channel_id,
                 user_id=user_id,
                 content=content,
             )
+
+            # -----------------------------------------------------
+            # Build broadcast payload
+            # -----------------------------------------------------
 
             message = {
                 "type": "message",
@@ -128,6 +239,10 @@ async def channel_websocket(
                 ),
             }
 
+            # -----------------------------------------------------
+            # Broadcast message to everyone in channel
+            # -----------------------------------------------------
+
             await connection_manager.broadcast(
                 channel_id,
                 message,
@@ -137,6 +252,17 @@ async def channel_websocket(
         connection_manager.disconnect(
             channel_id,
             websocket,
+        )
+
+        await connection_manager.broadcast(
+            channel_id,
+            {
+                "type": "system",
+                "event": "user_left",
+                "message": "User left the channel",
+                "user_id": user_id if "user_id" in locals() else None,
+                "channel_id": channel_id,
+            },
         )
 
     except Exception:

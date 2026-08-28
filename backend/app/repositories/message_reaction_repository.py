@@ -5,6 +5,7 @@ from app.models.message_reaction import MessageReaction
 
 
 class MessageReactionRepository:
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -44,9 +45,7 @@ class MessageReactionRepository:
             .where(
                 MessageReaction.message_id == message_id
             )
-            .order_by(
-                MessageReaction.created_at.asc()
-            )
+            .order_by(MessageReaction.created_at.asc())
         )
 
         return list(
