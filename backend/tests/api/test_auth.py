@@ -635,3 +635,140 @@ def test_reset_password_short_password():
     )
 
     assert response.status_code == 422
+
+# ============================================================
+# TOKEN SECURITY
+# ============================================================
+
+
+def test_access_token_cannot_be_used_as_refresh_token():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.json()["access_token"]
+
+    response = client.post(
+        "/api/v1/auth/refresh",
+        json={
+            "refresh_token": access_token,
+        },
+    )
+
+    assert response.status_code == 401
+
+
+def test_refresh_token_cannot_be_used_as_access_token():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
+
+    assert login_response.status_code == 200
+
+    refresh_token = login_response.json()["refresh_token"]
+
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={
+            "Authorization": f"Bearer {refresh_token}",
+        },
+    )
+
+    assert response.status_code == 401
+
+
+def test_old_refresh_token_cannot_be_reused_after_rotation():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
+
+    assert login_response.status_code == 200
+
+    old_refresh_token = login_response.json()["refresh_token"]
+
+    refresh_response = client.post(
+        "/api/v1/auth/refresh",
+        json={
+            "refresh_token": old_refresh_token,
+        },
+    )
+
+    assert refresh_response.status_code == 200
+
+    new_refresh_token = refresh_response.json()["refresh_token"]
+
+    assert new_refresh_token != old_refresh_token
+
+    reuse_response = client.post(
+        "/api/v1/auth/refresh",
+        json={
+            "refresh_token": old_refresh_token,
+        },
+    )
+
+    assert reuse_response.status_code == 401
+
+
+def test_logout_revokes_refresh_token():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
+
+    assert login_response.status_code == 200
+
+    refresh_token = login_response.json()["refresh_token"]
+
+    logout_response = client.post(
+        "/api/v1/auth/logout",
+        json={
+            "refresh_token": refresh_token,
+        },
+    )
+
+    assert logout_response.status_code == 204
+
+    refresh_response = client.post(
+        "/api/v1/auth/refresh",
+        json={
+            "refresh_token": refresh_token,
+        },
+    )
+
+    assert refresh_response.status_code == 401
+
+
+def test_tampered_refresh_token_is_rejected():
+    user = create_test_user()
+
+    login_response = login(
+        email=user["email"],
+    )
+
+    assert login_response.status_code == 200
+
+    refresh_token = login_response.json()["refresh_token"]
+
+    tampered_token = refresh_token[:-1] + (
+        "x"
+        if refresh_token[-1] != "x"
+        else "y"
+    )
+
+    response = client.post(
+        "/api/v1/auth/refresh",
+        json={
+            "refresh_token": tampered_token,
+        },
+    )
+
+    assert response.status_code == 401
