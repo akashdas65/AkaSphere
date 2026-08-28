@@ -27,10 +27,10 @@ class TokenService:
             ).total_seconds()
         )
 
-        self.redis.setex(
+        self.redis.set(
             key,
-            expires_seconds,
             user_id,
+            ex=expires_seconds,
         )
 
     def get_user_id_from_refresh_token(
@@ -39,7 +39,12 @@ class TokenService:
     ) -> str | None:
         key = f"refresh_token:{refresh_token}"
 
-        return self.redis.get(key)
+        user_id = self.redis.get(key)
+
+        if user_id is None:
+            return None
+
+        return user_id
 
     def revoke_refresh_token(
         self,
@@ -77,7 +82,10 @@ class TokenService:
 
         token_user_id = payload.get("sub")
 
-        if not token_user_id or str(token_user_id) != str(user_id):
+        if (
+            not token_user_id
+            or str(token_user_id) != str(user_id)
+        ):
             raise ValueError(
                 "Invalid refresh token"
             )

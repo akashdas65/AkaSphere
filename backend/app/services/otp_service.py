@@ -1,5 +1,4 @@
 import secrets
-from datetime import timedelta
 
 import redis
 
@@ -26,16 +25,16 @@ class OTPService:
 
         otp = self.generate_otp()
 
-        self.redis.setex(
+        self.redis.set(
             self._otp_key(email),
-            self.OTP_EXPIRE_SECONDS,
             otp,
+            ex=self.OTP_EXPIRE_SECONDS,
         )
 
-        self.redis.setex(
+        self.redis.set(
             self._attempt_key(email),
-            self.OTP_EXPIRE_SECONDS,
             0,
+            ex=self.OTP_EXPIRE_SECONDS,
         )
 
         return otp
@@ -51,7 +50,10 @@ class OTPService:
             self._attempt_key(email)
         )
 
-        if attempts is not None and int(attempts) >= self.MAX_ATTEMPTS:
+        if (
+            attempts is not None
+            and int(attempts) >= self.MAX_ATTEMPTS
+        ):
             return False
 
         stored_otp = self.redis.get(
