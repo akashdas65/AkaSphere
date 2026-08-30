@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";import {
+import { useState, type FormEvent } from "react";
+import {
   ArrowRight,
   LockKeyhole,
   Mail,
@@ -12,7 +13,6 @@ function Register() {
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -28,7 +28,6 @@ function Register() {
     try {
       await api.post("/auth/register", {
         full_name: fullName,
-        username,
         email,
         password,
       });
@@ -37,7 +36,7 @@ function Register() {
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
-          "Unable to create your account.",
+          "Unable to create your account. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -46,7 +45,7 @@ function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card register-card">
+      <div className="auth-card">
         <div className="auth-logo">
           <div className="logo-mark">
             <Sparkles size={19} />
@@ -59,7 +58,7 @@ function Register() {
           <h1>Create your account</h1>
 
           <p>
-            Build, collaborate and work smarter.
+            Start building smarter with your team.
           </p>
         </div>
 
@@ -70,7 +69,7 @@ function Register() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <label htmlFor="fullName">
+          <label htmlFor="full-name">
             Full name
           </label>
 
@@ -78,31 +77,12 @@ function Register() {
             <User size={18} />
 
             <input
-              id="fullName"
+              id="full-name"
               type="text"
               placeholder="Akash Das"
               value={fullName}
               onChange={(event) =>
                 setFullName(event.target.value)
-              }
-              required
-            />
-          </div>
-
-          <label htmlFor="username">
-            Username
-          </label>
-
-          <div className="input-wrapper">
-            <User size={18} />
-
-            <input
-              id="username"
-              type="text"
-              placeholder="akash"
-              value={username}
-              onChange={(event) =>
-                setUsername(event.target.value)
               }
               required
             />
@@ -137,7 +117,7 @@ function Register() {
             <input
               id="password"
               type="password"
-              placeholder="Create a strong password"
+              placeholder="Create a password"
               value={password}
               onChange={(event) =>
                 setPassword(event.target.value)
@@ -165,10 +145,7 @@ function Register() {
           </Link>
         </p>
 
-        <Link
-          className="back-home"
-          to="/"
-        >
+        <Link className="back-home" to="/">
           ← Back to home
         </Link>
       </div>

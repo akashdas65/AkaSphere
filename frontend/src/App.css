@@ -6,7 +6,11 @@
 .app {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 50% 10%, rgba(124, 58, 237, 0.12), transparent 35%),
+    radial-gradient(
+      circle at 50% 10%,
+      rgba(124, 58, 237, 0.12),
+      transparent 35%
+    ),
     #050507;
   color: #f4f4f5;
 }
@@ -171,8 +175,16 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 25%, rgba(124, 58, 237, 0.16), transparent 30%),
-    radial-gradient(circle at 50% 65%, rgba(59, 130, 246, 0.08), transparent 35%);
+    radial-gradient(
+      circle at 50% 25%,
+      rgba(124, 58, 237, 0.16),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 50% 65%,
+      rgba(59, 130, 246, 0.08),
+      transparent 35%
+    );
 }
 
 .hero-container {
@@ -292,7 +304,7 @@
   text-align: left;
 }
 
-/* browser/laptop top bar */
+/* Browser / laptop top bar */
 
 .dashboard-topbar {
   height: 48px;
@@ -338,7 +350,7 @@
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
 }
 
-/* dashboard body */
+/* Dashboard body */
 
 .dashboard-content {
   min-height: 480px;
@@ -346,7 +358,7 @@
   grid-template-columns: 220px minmax(0, 1fr);
 }
 
-/* sidebar */
+/* Sidebar */
 
 .dashboard-sidebar {
   padding: 20px 14px;
@@ -419,7 +431,7 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* main chat */
+/* Main chat */
 
 .dashboard-main {
   min-width: 0;
@@ -464,7 +476,7 @@
   background: #22c55e;
 }
 
-/* messages */
+/* Messages */
 
 .messages {
   flex: 1;
@@ -561,7 +573,7 @@
   line-height: 1.5;
 }
 
-/* chat input */
+/* Chat input */
 
 .chat-input {
   margin: 0 18px 18px;
@@ -705,7 +717,11 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 100% 0%, rgba(124, 58, 237, 0.1), transparent 35%),
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(124, 58, 237, 0.1),
+      transparent 35%
+    ),
     #09090d;
 }
 
@@ -741,7 +757,7 @@
   color: #8b5cf6;
 }
 
-/* architecture */
+/* Architecture */
 
 .architecture {
   display: flex;
@@ -790,7 +806,11 @@
 .cta-section {
   padding: 120px 20px;
   background:
-    radial-gradient(circle at 50% 40%, rgba(124, 58, 237, 0.12), transparent 35%),
+    radial-gradient(
+      circle at 50% 40%,
+      rgba(124, 58, 237, 0.12),
+      transparent 35%
+    ),
     #07070a;
 }
 
@@ -993,9 +1013,7 @@
     gap: 10px;
   }
 
-  /*
-    Mobile dashboard becomes a phone-like frame.
-  */
+  /* Mobile dashboard becomes a phone-like frame */
 
   .dashboard-wrapper {
     width: min(360px, 100%);
