@@ -17,6 +17,7 @@ from app.schemas.auth import (
     VerifyOTPRequest,
 )
 from app.services.auth_service import AuthService
+from app.services.email_service import EmailService
 from app.services.otp_service import OTPService
 from app.services.token_service import TokenService
 
@@ -27,18 +28,26 @@ router = APIRouter(
 )
 
 
+# ============================================================
+# REGISTER
+# ============================================================
+
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register(
+async def register(
     data: RegisterRequest,
     db: Session = Depends(get_db),
+    redis_client=Depends(get_redis),
 ) -> UserResponse:
+
     service = AuthService(db)
 
     try:
+        # Create the user.
+        # is_verified remains False until OTP verification.
         user = service.register(data)
 
     except ValueError as exc:
@@ -47,8 +56,49 @@ def register(
             detail=str(exc),
         ) from exc
 
+    # Generate OTP and store it in Redis
+    otp_service = OTPService(redis_client)
+
+    email = str(user.email).lower()
+
+    otp = otp_service.create_otp(email)
+
+    # Send OTP to the real email address
+    try:
+        await EmailService.send_otp_email(
+            recipient=email,
+            otp=otp,
+            purpose="email verification",
+        )
+
+    except Exception as exc:
+        # Remove OTP if email delivery fails.
+        redis_client.delete(
+            otp_service._otp_key(email)
+        )
+
+        redis_client.delete(
+            otp_service._attempt_key(email)
+        )
+
+        print(
+            f"Verification email failed for {email}: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Unable to send verification email. "
+                "Please try again later."
+            ),
+        ) from exc
+
     return UserResponse.model_validate(user)
 
+
+# ============================================================
+# LOGIN
+# ============================================================
 
 @router.post(
     "/login",
@@ -59,6 +109,7 @@ def login(
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> AuthTokens:
+
     service = AuthService(db)
 
     try:
@@ -86,6 +137,10 @@ def login(
     return tokens
 
 
+# ============================================================
+# REFRESH TOKEN
+# ============================================================
+
 @router.post(
     "/refresh",
     response_model=AuthTokens,
@@ -94,6 +149,7 @@ def refresh(
     data: RefreshTokenRequest,
     redis_client=Depends(get_redis),
 ) -> AuthTokens:
+
     token_service = TokenService(redis_client)
 
     try:
@@ -108,6 +164,10 @@ def refresh(
         ) from exc
 
 
+# ============================================================
+# LOGOUT
+# ============================================================
+
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -116,6 +176,7 @@ def logout(
     data: RefreshTokenRequest,
     redis_client=Depends(get_redis),
 ) -> None:
+
     TokenService(
         redis_client
     ).revoke_refresh_token(
@@ -125,25 +186,58 @@ def logout(
     return None
 
 
+# ============================================================
+# SEND EMAIL OTP
+# ============================================================
+
 @router.post(
     "/send-otp",
 )
-def send_otp(
+async def send_otp(
     data: OTPRequest,
     redis_client=Depends(get_redis),
 ) -> dict:
+
+    email = str(data.email).lower()
+
     otp_service = OTPService(redis_client)
 
-    otp = otp_service.create_otp(
-        str(data.email).lower()
-    )
+    # Generate and store OTP in Redis
+    otp = otp_service.create_otp(email)
+
+    try:
+        # Send OTP to the user's real email
+        await EmailService.send_otp_email(
+            recipient=email,
+            otp=otp,
+            purpose="email verification",
+        )
+
+    except Exception as exc:
+        # If email sending fails, remove the OTP
+        # so the user cannot verify with an undelivered code.
+        redis_client.delete(
+            otp_service._otp_key(email)
+        )
+
+        redis_client.delete(
+            otp_service._attempt_key(email)
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to send verification email. Please try again later.",
+        ) from exc
 
     return {
-        "message": "OTP generated successfully",
-        "otp": otp,
+        "message": "OTP sent successfully",
         "expires_in": OTPService.OTP_EXPIRE_SECONDS,
     }
 
+
+# ============================================================
+# VERIFY EMAIL OTP
+# ============================================================
 
 @router.post(
     "/verify-otp",
@@ -153,10 +247,12 @@ def verify_otp(
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> dict:
-    otp_service = OTPService(redis_client)
 
     email = str(data.email).lower()
 
+    otp_service = OTPService(redis_client)
+
+    # Verify OTP
     if not otp_service.verify_otp(
         email=email,
         otp=data.otp,
@@ -176,6 +272,7 @@ def verify_otp(
             detail="User not found",
         )
 
+    # Mark email as verified
     repository.mark_as_verified(user)
 
     return {
@@ -185,31 +282,54 @@ def verify_otp(
     }
 
 
+# ============================================================
+# FORGOT PASSWORD
+# ============================================================
+
 @router.post(
     "/forgot-password",
 )
-def forgot_password(
+async def forgot_password(
     data: ForgotPasswordRequest,
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> dict:
+
     repository = UserRepository(db)
 
     email = str(data.email).lower()
 
     user = repository.get_by_email(email)
 
-    # Same response whether the email exists or not.
-    # This prevents user enumeration.
+    # IMPORTANT:
+    # Same response is returned whether the account exists
+    # or not. This prevents email/user enumeration.
+
     if user is not None:
+
         otp_service = OTPService(redis_client)
 
         otp = otp_service.create_otp(email)
 
-        # Development only.
-        print(
-            f"Password reset OTP for {email}: {otp}"
-        )
+        try:
+            await EmailService.send_otp_email(
+                recipient=email,
+                otp=otp,
+                purpose="password reset",
+            )
+
+        except Exception:
+            # Remove OTP if email delivery fails
+            redis_client.delete(
+                otp_service._otp_key(email)
+            )
+
+            redis_client.delete(
+                otp_service._attempt_key(email)
+            )
+
+            # Do not reveal whether the account exists
+            pass
 
     return {
         "message": (
@@ -219,6 +339,10 @@ def forgot_password(
     }
 
 
+# ============================================================
+# RESET PASSWORD
+# ============================================================
+
 @router.post(
     "/reset-password",
 )
@@ -227,10 +351,12 @@ def reset_password(
     db: Session = Depends(get_db),
     redis_client=Depends(get_redis),
 ) -> dict:
+
     otp_service = OTPService(redis_client)
 
     email = str(data.email).lower()
 
+    # Verify password-reset OTP
     if not otp_service.verify_otp(
         email=email,
         otp=data.otp,
@@ -250,6 +376,7 @@ def reset_password(
             detail="Invalid password reset request",
         )
 
+    # Update password
     repository.update_password(
         user=user,
         new_password=data.new_password,
@@ -260,6 +387,10 @@ def reset_password(
     }
 
 
+# ============================================================
+# CURRENT USER
+# ============================================================
+
 @router.get(
     "/me",
     response_model=UserResponse,
@@ -268,6 +399,7 @@ def get_me(
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> UserResponse:
+
     repository = UserRepository(db)
 
     user = repository.get_by_id(user_id)

@@ -8,24 +8,17 @@ import {
 import LandingPage from "./LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyOTP from "./pages/VerifyOTP";
 import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* =====================================================
-            PUBLIC LANDING PAGE
-        ====================================================== */}
-
         <Route
           path="/"
           element={<LandingPage />}
         />
-
-        {/* =====================================================
-            AUTHENTICATION
-        ====================================================== */}
 
         <Route
           path="/login"
@@ -37,19 +30,15 @@ function App() {
           element={<Register />}
         />
 
-        {/* =====================================================
-            APPLICATION
-        ====================================================== */}
+        <Route
+          path="/verify-otp"
+          element={<VerifyOTP />}
+        />
 
         <Route
           path="/dashboard"
           element={<Dashboard />}
         />
-
-        {/* =====================================================
-            FALLBACK
-            Unknown URL -> Landing Page
-        ====================================================== */}
 
         <Route
           path="*"

@@ -25,9 +25,18 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
+    # Email / SMTP
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str
+    smtp_password: str
+    email_from: str
+    email_from_name: str = "AkaSphere"
+
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         case_sensitive=False,
+        extra="ignore",
     )
 
     @property
