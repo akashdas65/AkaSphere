@@ -15,28 +15,16 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={<LandingPage />}
-        />
+        <Route path="/" element={<LandingPage />} />
+
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/register" element={<Register />} />
+
+        <Route path="/verify-otp" element={<VerifyOTP />} />
 
         <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        <Route
-          path="/register"
-          element={<Register />}
-        />
-
-        <Route
-          path="/verify-otp"
-          element={<VerifyOTP />}
-        />
-
-        <Route
-          path="/dashboard"
+          path="/dashboard/*"
           element={<Dashboard />}
         />
 

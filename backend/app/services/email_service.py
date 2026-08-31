@@ -22,9 +22,7 @@ class EmailService:
 
         message["To"] = recipient
 
-        message["Subject"] = (
-            "AkaSphere - Your verification code"
-        )
+        message["Subject"] = "AkaSphere - Your verification code"
 
         message.set_content(
             f"""AkaSphere
@@ -43,12 +41,14 @@ AkaSphere Security
 """
         )
 
+        # Gmail SMTP over implicit SSL.
+        # Port 465 is reachable from the Docker container.
         await aiosmtplib.send(
             message,
             hostname=settings.smtp_host,
             port=settings.smtp_port,
             username=settings.smtp_username,
             password=settings.smtp_password,
-            start_tls=True,
-            timeout=15,
+            use_tls=True,
+            timeout=20,
         )

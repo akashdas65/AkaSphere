@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-
 import {
   Bell,
   Bot,
   ChevronDown,
+  FolderKanban,
   Hash,
   Home,
   LogOut,
@@ -13,16 +12,22 @@ import {
   Settings,
   Sparkles,
   Users,
-  Zap,
+  X,
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import api from "../services/api";
-
-/* ============================================================
-   TYPES
-============================================================ */
 
 interface User {
   id: string;
@@ -38,46 +43,19 @@ interface Channel {
   unread: number;
 }
 
-/* ============================================================
-   STATIC UI DATA
-   These will later be replaced with real API data.
-============================================================ */
-
 const channels: Channel[] = [
-  {
-    name: "general",
-    unread: 0,
-  },
-  {
-    name: "engineering",
-    unread: 4,
-  },
-  {
-    name: "design",
-    unread: 2,
-  },
-  {
-    name: "projects",
-    unread: 0,
-  },
+  { name: "general", unread: 0 },
+  { name: "engineering", unread: 4 },
+  { name: "design", unread: 2 },
+  { name: "projects", unread: 0 },
 ];
-
-/* ============================================================
-   DASHBOARD
-============================================================ */
 
 function Dashboard() {
   const navigate = useNavigate();
-
-  /* ----------------------------------------------------------
-     STATE
-  ---------------------------------------------------------- */
+  const location = useLocation();
 
   const [user, setUser] = useState<User | null>(null);
-
   const [loading, setLoading] = useState(true);
-
-  const [activeNav, setActiveNav] = useState("Overview");
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -87,9 +65,25 @@ function Dashboard() {
   const [profileOpen, setProfileOpen] =
     useState(false);
 
-  /* ----------------------------------------------------------
-     LOAD CURRENT USER
-  ---------------------------------------------------------- */
+  const [mobileSidebarOpen, setMobileSidebarOpen] =
+    useState(false);
+
+  const [toast, setToast] =
+    useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToast(message);
+
+    window.setTimeout(() => {
+      setToast(null);
+    }, 2500);
+  };
+
+  /*
+   * =========================================================
+   * LOAD CURRENT USER
+   * =========================================================
+   */
 
   useEffect(() => {
     let mounted = true;
@@ -102,12 +96,12 @@ function Dashboard() {
         navigate("/login", {
           replace: true,
         });
-
         return;
       }
 
       try {
-        const response = await api.get("/auth/me");
+        const response =
+          await api.get("/auth/me");
 
         if (mounted) {
           setUser(response.data);
@@ -145,9 +139,11 @@ function Dashboard() {
     };
   }, [navigate]);
 
-  /* ----------------------------------------------------------
-     LOGOUT
-  ---------------------------------------------------------- */
+  /*
+   * =========================================================
+   * LOGOUT
+   * =========================================================
+   */
 
   const logout = async () => {
     const refreshToken =
@@ -164,7 +160,7 @@ function Dashboard() {
       }
     } catch (error) {
       console.error(
-        "Logout API request failed:",
+        "Logout failed:",
         error,
       );
     } finally {
@@ -182,9 +178,11 @@ function Dashboard() {
     }
   };
 
-  /* ----------------------------------------------------------
-     USER DISPLAY DATA
-  ---------------------------------------------------------- */
+  /*
+   * =========================================================
+   * USER INFORMATION
+   * =========================================================
+   */
 
   const firstName = useMemo(() => {
     if (user?.full_name) {
@@ -214,12 +212,64 @@ function Dashboard() {
     return "A";
   }, [user]);
 
-  /* ----------------------------------------------------------
-     SEARCH
-  ---------------------------------------------------------- */
+  /*
+   * =========================================================
+   * ACTIVE PAGE
+   * =========================================================
+   */
+
+  const activePage = useMemo(() => {
+    const path = location.pathname;
+
+    if (path.includes("/messages")) {
+      return "Messages";
+    }
+
+    if (path.includes("/team")) {
+      return "Team";
+    }
+
+    if (path.includes("/ai")) {
+      return "AI Assistant";
+    }
+
+    if (path.includes("/projects")) {
+      return "Projects";
+    }
+
+    if (path.includes("/settings")) {
+      return "Settings";
+    }
+
+    if (path.includes("/channels/")) {
+      return "Channel";
+    }
+
+    return "Overview";
+  }, [location.pathname]);
+
+  /*
+   * =========================================================
+   * NAVIGATION
+   * =========================================================
+   */
+
+  const navigateTo = (path: string) => {
+    setNotificationsOpen(false);
+    setProfileOpen(false);
+    setMobileSidebarOpen(false);
+
+    navigate(path);
+  };
+
+  /*
+   * =========================================================
+   * SEARCH
+   * =========================================================
+   */
 
   const handleSearch = (
-    event: React.FormEvent<HTMLFormElement>,
+    event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
 
@@ -227,46 +277,36 @@ function Dashboard() {
       searchQuery.trim();
 
     if (!query) {
+      showToast(
+        "Type something to search.",
+      );
       return;
     }
 
-    console.log(
-      "Workspace search:",
-      query,
+    showToast(
+      `Searching for "${query}"`,
     );
   };
 
-  /* ----------------------------------------------------------
-     NAVIGATION HANDLER
-  ---------------------------------------------------------- */
-
-  const handleNavigation = (
-    name: string,
-  ) => {
-    setActiveNav(name);
-
-    setNotificationsOpen(false);
-    setProfileOpen(false);
-  };
-
-  /* ----------------------------------------------------------
-     CHANNEL HANDLER
-  ---------------------------------------------------------- */
+  /*
+   * =========================================================
+   * CHANNEL
+   * =========================================================
+   */
 
   const handleChannelClick = (
     channelName: string,
   ) => {
-    setActiveNav(channelName);
-
-    console.log(
-      "Selected channel:",
-      channelName,
+    navigateTo(
+      `/dashboard/channels/${channelName}`,
     );
   };
 
-  /* ----------------------------------------------------------
-     LOADING SCREEN
-  ---------------------------------------------------------- */
+  /*
+   * =========================================================
+   * LOADING
+   * =========================================================
+   */
 
   if (loading) {
     return (
@@ -286,50 +326,79 @@ function Dashboard() {
     );
   }
 
-  /* ==========================================================
-     MAIN DASHBOARD
-  ========================================================== */
+  /*
+   * =========================================================
+   * DASHBOARD
+   * =========================================================
+   */
 
   return (
     <div className="dashboard-page">
 
-      {/* ======================================================
+      {/* TOAST */}
+
+      {toast && (
+        <div className="dashboard-toast">
+          <span>{toast}</span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setToast(null)
+            }
+            aria-label="Close notification"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* MOBILE OVERLAY */}
+
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-overlay"
+          aria-label="Close sidebar"
+          onClick={() =>
+            setMobileSidebarOpen(false)
+          }
+        />
+      )}
+
+      {/* =====================================================
           SIDEBAR
-      ======================================================= */}
+      ====================================================== */}
 
-      <aside className="dashboard-sidebar">
+      <aside
+        className={`dashboard-sidebar ${
+          mobileSidebarOpen
+            ? "mobile-open"
+            : ""
+        }`}
+      >
 
-        {/* ----------------------------------------------------
-            BRAND
-        ----------------------------------------------------- */}
+        {/* BRAND */}
 
         <div className="dashboard-brand">
-
           <div className="dashboard-brand-icon">
             <Sparkles size={19} />
           </div>
 
           <div>
-            <strong>
-              AkaSphere
-            </strong>
+            <strong>AkaSphere</strong>
 
-            <span>
-              Workspace
-            </span>
+            <span>Workspace</span>
           </div>
-
         </div>
 
-        {/* ----------------------------------------------------
-            WORKSPACE SELECTOR
-        ----------------------------------------------------- */}
+        {/* WORKSPACE */}
 
         <button
-          className="workspace-selector"
           type="button"
+          className="workspace-selector"
           onClick={() =>
-            handleNavigation("Overview")
+            navigateTo("/dashboard")
           }
         >
           <div className="workspace-selector-icon">
@@ -337,9 +406,7 @@ function Dashboard() {
           </div>
 
           <div className="workspace-selector-info">
-            <strong>
-              AkaSphere
-            </strong>
+            <strong>AkaSphere</strong>
 
             <span>
               Personal workspace
@@ -349,9 +416,7 @@ function Dashboard() {
           <ChevronDown size={16} />
         </button>
 
-        {/* ----------------------------------------------------
-            MAIN NAVIGATION
-        ----------------------------------------------------- */}
+        {/* WORKSPACE NAVIGATION */}
 
         <div className="sidebar-group">
 
@@ -359,101 +424,114 @@ function Dashboard() {
             WORKSPACE
           </span>
 
-          {/* Overview */}
+          {/* OVERVIEW */}
 
           <button
             type="button"
             className={`sidebar-nav ${
-              activeNav === "Overview"
+              activePage === "Overview"
                 ? "active"
                 : ""
             }`}
             onClick={() =>
-              handleNavigation("Overview")
+              navigateTo("/dashboard")
             }
           >
             <Home size={18} />
 
-            <span>
-              Overview
-            </span>
+            <span>Overview</span>
           </button>
 
-          {/* Messages */}
+          {/* MESSAGES */}
 
           <button
             type="button"
             className={`sidebar-nav ${
-              activeNav === "Messages"
+              activePage === "Messages"
                 ? "active"
                 : ""
             }`}
             onClick={() =>
-              handleNavigation("Messages")
+              navigateTo(
+                "/dashboard/messages",
+              )
             }
           >
             <MessageSquare size={18} />
 
-            <span>
-              Messages
-            </span>
+            <span>Messages</span>
 
             <span className="nav-count">
               6
             </span>
           </button>
 
-          {/* Team */}
+          {/* TEAM */}
 
           <button
             type="button"
             className={`sidebar-nav ${
-              activeNav === "Team"
+              activePage === "Team"
                 ? "active"
                 : ""
             }`}
             onClick={() =>
-              handleNavigation("Team")
+              navigateTo(
+                "/dashboard/team",
+              )
             }
           >
             <Users size={18} />
 
-            <span>
-              Team
-            </span>
+            <span>Team</span>
           </button>
 
-          {/* AI Assistant */}
+          {/* PROJECTS */}
 
           <button
             type="button"
             className={`sidebar-nav ${
-              activeNav === "AI Assistant"
+              activePage === "Projects"
                 ? "active"
                 : ""
             }`}
             onClick={() =>
-              handleNavigation(
-                "AI Assistant",
+              navigateTo(
+                "/dashboard/projects",
+              )
+            }
+          >
+            <FolderKanban size={18} />
+
+            <span>Projects</span>
+          </button>
+
+          {/* AI */}
+
+          <button
+            type="button"
+            className={`sidebar-nav ${
+              activePage === "AI Assistant"
+                ? "active"
+                : ""
+            }`}
+            onClick={() =>
+              navigateTo(
+                "/dashboard/ai",
               )
             }
           >
             <Bot size={18} />
 
-            <span>
-              AI Assistant
-            </span>
+            <span>AI Assistant</span>
 
             <span className="ai-badge">
               AI
             </span>
           </button>
-
         </div>
 
-        {/* ----------------------------------------------------
-            CHANNELS
-        ----------------------------------------------------- */}
+        {/* CHANNELS */}
 
         <div className="sidebar-group channels-group">
 
@@ -468,72 +546,72 @@ function Dashboard() {
               className="sidebar-add"
               aria-label="Create channel"
               onClick={() =>
-                console.log(
-                  "Create channel clicked",
+                showToast(
+                  "Create channel feature coming next.",
                 )
               }
             >
               <Plus size={15} />
             </button>
-
           </div>
 
-          {channels.map(
-            (channel) => (
-              <button
-                type="button"
-                className={`sidebar-channel ${
-                  activeNav === channel.name
-                    ? "active"
-                    : ""
-                }`}
-                key={channel.name}
-                onClick={() =>
-                  handleChannelClick(
-                    channel.name,
-                  )
-                }
-              >
-                <Hash size={16} />
+          {channels.map((channel) => (
+            <button
+              key={channel.name}
+              type="button"
+              className={`sidebar-channel ${
+                location.pathname.includes(
+                  `/channels/${channel.name}`,
+                )
+                  ? "active"
+                  : ""
+              }`}
+              onClick={() =>
+                handleChannelClick(
+                  channel.name,
+                )
+              }
+            >
+              <Hash size={16} />
 
-                <span>
-                  {channel.name}
+              <span>
+                {channel.name}
+              </span>
+
+              {channel.unread > 0 && (
+                <span className="channel-unread">
+                  {channel.unread}
                 </span>
-
-                {channel.unread > 0 && (
-                  <span className="channel-unread">
-                    {channel.unread}
-                  </span>
-                )}
-              </button>
-            ),
-          )}
-
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* ----------------------------------------------------
-            BOTTOM NAVIGATION
-        ----------------------------------------------------- */}
+        {/* SIDEBAR BOTTOM */}
 
         <div className="sidebar-bottom">
+
+          {/* SETTINGS */}
 
           <button
             type="button"
             className={`sidebar-nav ${
-              activeNav === "Settings"
+              activePage === "Settings"
                 ? "active"
                 : ""
             }`}
             onClick={() =>
-              handleNavigation("Settings")
+              navigateTo(
+                "/dashboard/settings",
+              )
             }
           >
             <Settings size={18} />
 
-            <span>
-              Settings
-            </span>
+            <span>Settings</span>
           </button>
+
+          {/* LOGOUT */}
 
           <button
             type="button"
@@ -542,26 +620,35 @@ function Dashboard() {
           >
             <LogOut size={18} />
 
-            <span>
-              Logout
-            </span>
+            <span>Logout</span>
           </button>
-
         </div>
-
       </aside>
 
-      {/* ======================================================
-          MAIN AREA
-      ======================================================= */}
+      {/* =====================================================
+          MAIN
+      ====================================================== */}
 
       <div className="dashboard-main">
 
-        {/* ====================================================
-            TOP NAVBAR
-        ===================================================== */}
+        {/* TOPBAR */}
 
         <header className="dashboard-topbar">
+
+          {/* MOBILE MENU */}
+
+          <button
+            type="button"
+            className="mobile-menu-button"
+            onClick={() =>
+              setMobileSidebarOpen(true)
+            }
+            aria-label="Open menu"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
 
           {/* SEARCH */}
 
@@ -583,16 +670,14 @@ function Dashboard() {
               aria-label="Search workspace"
             />
 
-            <kbd>
-              Ctrl K
-            </kbd>
+            <kbd>Ctrl K</kbd>
           </form>
 
-          {/* TOP ACTIONS */}
+          {/* TOPBAR ACTIONS */}
 
           <div className="topbar-actions">
 
-            {/* Notifications */}
+            {/* NOTIFICATIONS */}
 
             <div className="topbar-menu">
 
@@ -600,12 +685,14 @@ function Dashboard() {
                 type="button"
                 className="topbar-icon"
                 aria-label="Notifications"
-                onClick={() =>
+                onClick={() => {
                   setNotificationsOpen(
                     (previous) =>
                       !previous,
-                  )
-                }
+                  );
+
+                  setProfileOpen(false);
+                }}
               >
                 <Bell size={19} />
 
@@ -625,26 +712,26 @@ function Dashboard() {
 
                 </div>
               )}
-
             </div>
 
             <div className="topbar-divider" />
 
-            {/* Profile */}
+            {/* PROFILE */}
 
             <div className="topbar-menu">
 
               <button
                 type="button"
                 className="profile-button"
-                onClick={() =>
+                onClick={() => {
                   setProfileOpen(
                     (previous) =>
                       !previous,
-                  )
-                }
-              >
+                  );
 
+                  setNotificationsOpen(false);
+                }}
+              >
                 <div className="profile-avatar">
                   {avatarLetter}
                 </div>
@@ -664,7 +751,6 @@ function Dashboard() {
                 </div>
 
                 <ChevronDown size={16} />
-
               </button>
 
               {profileOpen && (
@@ -693,15 +779,12 @@ function Dashboard() {
                   <button
                     type="button"
                     onClick={() =>
-                      handleNavigation(
-                        "Settings",
+                      navigateTo(
+                        "/dashboard/settings",
                       )
                     }
                   >
-                    <Settings
-                      size={16}
-                    />
-
+                    <Settings size={16} />
                     Settings
                   </button>
 
@@ -709,635 +792,719 @@ function Dashboard() {
                     type="button"
                     onClick={logout}
                   >
-                    <LogOut
-                      size={16}
-                    />
-
+                    <LogOut size={16} />
                     Logout
                   </button>
 
                 </div>
               )}
-
             </div>
-
           </div>
-
         </header>
 
-        {/* ====================================================
+        {/* =====================================================
             CONTENT
-        ===================================================== */}
+        ====================================================== */}
 
         <main className="dashboard-content">
 
-          {/* --------------------------------------------------
-              HEADING
-          --------------------------------------------------- */}
+          {/* OVERVIEW */}
 
-          <section className="dashboard-heading">
+          {activePage === "Overview" && (
+            <>
 
-            <div>
-
-              <span className="dashboard-eyebrow">
-                YOUR WORKSPACE
-              </span>
-
-              <h1>
-                Good morning,{" "}
-                {firstName} 👋
-              </h1>
-
-              <p>
-                Here's what's happening
-                across your workspace
-                today.
-              </p>
-
-            </div>
-
-            <button
-              type="button"
-              className="dashboard-primary-button"
-              onClick={() =>
-                console.log(
-                  "Create project clicked",
-                )
-              }
-            >
-              <Plus size={18} />
-
-              New project
-            </button>
-
-          </section>
-
-          {/* ==================================================
-              STATS
-          =================================================== */}
-
-          <section className="stats-grid">
-
-            {/* Messages */}
-
-            <article className="stat-card">
-
-              <div className="stat-card-top">
-
-                <div className="stat-icon">
-                  <MessageSquare
-                    size={20}
-                  />
-                </div>
-
-                <span className="stat-change positive">
-                  +18%
-                </span>
-
-              </div>
-
-              <div className="stat-value">
-                128
-              </div>
-
-              <div className="stat-label">
-                Messages this week
-              </div>
-
-            </article>
-
-            {/* Team */}
-
-            <article className="stat-card">
-
-              <div className="stat-card-top">
-
-                <div className="stat-icon">
-                  <Users size={20} />
-                </div>
-
-                <span className="stat-change positive">
-                  +3
-                </span>
-
-              </div>
-
-              <div className="stat-value">
-                24
-              </div>
-
-              <div className="stat-label">
-                Team members
-              </div>
-
-            </article>
-
-            {/* Projects */}
-
-            <article className="stat-card">
-
-              <div className="stat-card-top">
-
-                <div className="stat-icon">
-                  <Zap size={20} />
-                </div>
-
-                <span className="stat-change positive">
-                  +12%
-                </span>
-
-              </div>
-
-              <div className="stat-value">
-                12
-              </div>
-
-              <div className="stat-label">
-                Active projects
-              </div>
-
-            </article>
-
-            {/* AI */}
-
-            <article className="stat-card">
-
-              <div className="stat-card-top">
-
-                <div className="stat-icon ai-stat-icon">
-                  <Sparkles
-                    size={20}
-                  />
-                </div>
-
-                <span className="stat-change">
-                  AI
-                </span>
-
-              </div>
-
-              <div className="stat-value">
-                94%
-              </div>
-
-              <div className="stat-label">
-                AI productivity score
-              </div>
-
-            </article>
-
-          </section>
-
-          {/* ==================================================
-              MAIN GRID
-          =================================================== */}
-
-          <section className="dashboard-grid">
-
-            {/* =================================================
-                RECENT CONVERSATIONS
-            ================================================== */}
-
-            <article className="dashboard-card conversations-card">
-
-              <div className="card-header">
+              <section className="dashboard-heading">
 
                 <div>
 
-                  <h2>
-                    Recent conversations
-                  </h2>
+                  <span className="dashboard-eyebrow">
+                    YOUR WORKSPACE
+                  </span>
+
+                  <h1>
+                    Good morning,{" "}
+                    {firstName} 👋
+                  </h1>
 
                   <p>
-                    Stay up to date with
-                    your team.
+                    Here's what's happening
+                    across your workspace
+                    today.
                   </p>
 
                 </div>
 
                 <button
                   type="button"
-                  className="card-link"
+                  className="dashboard-primary-button"
                   onClick={() =>
-                    handleNavigation(
-                      "Messages",
+                    navigateTo(
+                      "/dashboard/projects",
                     )
                   }
                 >
-                  View all
+                  <Plus size={18} />
+
+                  New project
                 </button>
 
-              </div>
+              </section>
 
-              <div className="conversation-list">
+              {/* STATS */}
 
-                {/* Rahul */}
+              <section className="stats-grid">
 
-                <div className="conversation-item">
+                <article className="stat-card">
 
-                  <div className="conversation-avatar avatar-purple">
-                    R
-                  </div>
+                  <div className="stat-card-top">
 
-                  <div className="conversation-content">
-
-                    <div className="conversation-title">
-
-                      <strong>
-                        Rahul
-                      </strong>
-
-                      <span>
-                        10:43 AM
-                      </span>
-
+                    <div className="stat-icon">
+                      <MessageSquare
+                        size={20}
+                      />
                     </div>
 
-                    <p>
-                      The new collaboration
-                      dashboard looks
-                      amazing.
-                    </p>
-
-                    <span className="conversation-channel">
-                      # general
+                    <span className="stat-change positive">
+                      +18%
                     </span>
 
                   </div>
 
-                  <span className="unread-badge">
-                    2
-                  </span>
-
-                </div>
-
-                {/* Priya */}
-
-                <div className="conversation-item">
-
-                  <div className="conversation-avatar avatar-blue">
-                    P
+                  <div className="stat-value">
+                    128
                   </div>
 
-                  <div className="conversation-content">
+                  <div className="stat-label">
+                    Messages this week
+                  </div>
 
-                    <div className="conversation-title">
+                </article>
 
-                      <strong>
-                        Priya
-                      </strong>
+                <article className="stat-card">
 
-                      <span>
-                        10:21 AM
-                      </span>
+                  <div className="stat-card-top">
 
+                    <div className="stat-icon">
+                      <Users size={20} />
                     </div>
 
-                    <p>
-                      I've uploaded the
-                      latest design files
-                      for review.
-                    </p>
-
-                    <span className="conversation-channel">
-                      # design
+                    <span className="stat-change positive">
+                      +3
                     </span>
 
                   </div>
 
-                </div>
-
-                {/* Ankit */}
-
-                <div className="conversation-item">
-
-                  <div className="conversation-avatar avatar-green">
-                    A
+                  <div className="stat-value">
+                    24
                   </div>
 
-                  <div className="conversation-content">
+                  <div className="stat-label">
+                    Team members
+                  </div>
 
-                    <div className="conversation-title">
+                </article>
 
-                      <strong>
-                        Ankit
-                      </strong>
+                <article className="stat-card">
 
-                      <span>
-                        09:48 AM
-                      </span>
+                  <div className="stat-card-top">
 
+                    <div className="stat-icon">
+                      <FolderKanban
+                        size={20}
+                      />
                     </div>
 
-                    <p>
-                      Backend deployment
-                      completed
-                      successfully.
-                    </p>
-
-                    <span className="conversation-channel">
-                      # engineering
+                    <span className="stat-change positive">
+                      +12%
                     </span>
 
                   </div>
 
-                  <span className="unread-badge">
-                    4
-                  </span>
+                  <div className="stat-value">
+                    12
+                  </div>
+
+                  <div className="stat-label">
+                    Active projects
+                  </div>
+
+                </article>
+
+                <article className="stat-card">
+
+                  <div className="stat-card-top">
+
+                    <div className="stat-icon ai-stat-icon">
+                      <Sparkles size={20} />
+                    </div>
+
+                    <span className="stat-change">
+                      AI
+                    </span>
+
+                  </div>
+
+                  <div className="stat-value">
+                    94%
+                  </div>
+
+                  <div className="stat-label">
+                    AI productivity score
+                  </div>
+
+                </article>
+
+              </section>
+
+              {/* MAIN CARDS */}
+
+              <section className="dashboard-grid">
+
+                {/* CONVERSATIONS */}
+
+                <article className="dashboard-card conversations-card">
+
+                  <div className="card-header">
+
+                    <div>
+
+                      <h2>
+                        Recent conversations
+                      </h2>
+
+                      <p>
+                        Stay up to date with
+                        your team.
+                      </p>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      className="card-link"
+                      onClick={() =>
+                        navigateTo(
+                          "/dashboard/messages",
+                        )
+                      }
+                    >
+                      View all
+                    </button>
+
+                  </div>
+
+                  <div className="conversation-list">
+
+                    <button
+                      type="button"
+                      className="conversation-item"
+                      onClick={() =>
+                        handleChannelClick(
+                          "general",
+                        )
+                      }
+                    >
+
+                      <div className="conversation-avatar avatar-purple">
+                        R
+                      </div>
+
+                      <div className="conversation-content">
+
+                        <div className="conversation-title">
+                          <strong>Rahul</strong>
+
+                          <span>
+                            10:43 AM
+                          </span>
+                        </div>
+
+                        <p>
+                          The new collaboration
+                          dashboard looks
+                          amazing.
+                        </p>
+
+                        <span className="conversation-channel">
+                          # general
+                        </span>
+
+                      </div>
+
+                      <span className="unread-badge">
+                        2
+                      </span>
+
+                    </button>
+
+                    <button
+                      type="button"
+                      className="conversation-item"
+                      onClick={() =>
+                        handleChannelClick(
+                          "design",
+                        )
+                      }
+                    >
+
+                      <div className="conversation-avatar avatar-blue">
+                        P
+                      </div>
+
+                      <div className="conversation-content">
+
+                        <div className="conversation-title">
+                          <strong>Priya</strong>
+
+                          <span>
+                            10:21 AM
+                          </span>
+                        </div>
+
+                        <p>
+                          I've uploaded the
+                          latest design files
+                          for review.
+                        </p>
+
+                        <span className="conversation-channel">
+                          # design
+                        </span>
+
+                      </div>
+
+                    </button>
+
+                    <button
+                      type="button"
+                      className="conversation-item"
+                      onClick={() =>
+                        handleChannelClick(
+                          "engineering",
+                        )
+                      }
+                    >
+
+                      <div className="conversation-avatar avatar-green">
+                        A
+                      </div>
+
+                      <div className="conversation-content">
+
+                        <div className="conversation-title">
+                          <strong>Ankit</strong>
+
+                          <span>
+                            09:48 AM
+                          </span>
+                        </div>
+
+                        <p>
+                          Backend deployment
+                          completed
+                          successfully.
+                        </p>
+
+                        <span className="conversation-channel">
+                          # engineering
+                        </span>
+
+                      </div>
+
+                      <span className="unread-badge">
+                        4
+                      </span>
+
+                    </button>
+
+                  </div>
+                </article>
+
+                {/* AI CARD */}
+
+                <article className="dashboard-card ai-card">
+
+                  <div className="ai-card-glow" />
+
+                  <div className="ai-card-header">
+
+                    <div className="ai-card-icon">
+                      <Sparkles size={22} />
+                    </div>
+
+                    <span>
+                      AI ASSISTANT
+                    </span>
+
+                  </div>
+
+                  <h2>
+                    Your intelligent
+                    <br />
+                    workspace assistant.
+                  </h2>
+
+                  <p>
+                    Summarize conversations,
+                    generate ideas, create
+                    tasks and get answers
+                    from your workspace.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="ai-action-button"
+                    onClick={() =>
+                      navigateTo(
+                        "/dashboard/ai",
+                      )
+                    }
+                  >
+                    <Bot size={17} />
+
+                    Open AI Assistant
+                  </button>
+
+                  <div className="ai-suggestions">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showToast(
+                          "AI summarization is ready to connect.",
+                        )
+                      }
+                    >
+                      Summarize today's
+                      messages
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showToast(
+                          "AI task generation is ready to connect.",
+                        )
+                      }
+                    >
+                      Create project tasks
+                    </button>
+
+                  </div>
+                </article>
+
+              </section>
+
+              {/* PROJECTS */}
+
+              <section className="dashboard-card projects-card">
+
+                <div className="card-header">
+
+                  <div>
+
+                    <h2>
+                      Active projects
+                    </h2>
+
+                    <p>
+                      Track what's currently
+                      being built.
+                    </p>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    className="card-link"
+                    onClick={() =>
+                      navigateTo(
+                        "/dashboard/projects",
+                      )
+                    }
+                  >
+                    View projects
+                  </button>
 
                 </div>
 
-              </div>
+                <div className="project-list">
 
-            </article>
+                  <button
+                    type="button"
+                    className="project-row"
+                    onClick={() =>
+                      navigateTo(
+                        "/dashboard/projects",
+                      )
+                    }
+                  >
 
-            {/* =================================================
-                AI ASSISTANT
-            ================================================== */}
+                    <div className="project-info">
 
-            <article className="dashboard-card ai-card">
+                      <div className="project-icon">
+                        A
+                      </div>
 
-              <div className="ai-card-glow" />
+                      <div>
 
-              <div className="ai-card-header">
+                        <strong>
+                          AkaSphere Platform
+                        </strong>
 
-                <div className="ai-card-icon">
-                  <Sparkles size={22} />
+                        <span>
+                          Product development
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <div className="project-progress">
+
+                      <div className="progress-label">
+
+                        <span>
+                          Progress
+                        </span>
+
+                        <strong>
+                          78%
+                        </strong>
+
+                      </div>
+
+                      <div className="progress-bar">
+                        <span
+                          style={{
+                            width: "78%",
+                          }}
+                        />
+                      </div>
+
+                    </div>
+
+                    <span className="project-status">
+                      On track
+                    </span>
+
+                  </button>
+
+                  <button
+                    type="button"
+                    className="project-row"
+                    onClick={() =>
+                      navigateTo(
+                        "/dashboard/ai",
+                      )
+                    }
+                  >
+
+                    <div className="project-info">
+
+                      <div className="project-icon project-icon-ai">
+                        <Sparkles size={17} />
+                      </div>
+
+                      <div>
+
+                        <strong>
+                          AI Assistant
+                        </strong>
+
+                        <span>
+                          Intelligence features
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <div className="project-progress">
+
+                      <div className="progress-label">
+
+                        <span>
+                          Progress
+                        </span>
+
+                        <strong>
+                          54%
+                        </strong>
+
+                      </div>
+
+                      <div className="progress-bar">
+                        <span
+                          style={{
+                            width: "54%",
+                          }}
+                        />
+                      </div>
+
+                    </div>
+
+                    <span className="project-status">
+                      In progress
+                    </span>
+
+                  </button>
+
+                  <button
+                    type="button"
+                    className="project-row"
+                    onClick={() =>
+                      navigateTo(
+                        "/dashboard/projects",
+                      )
+                    }
+                  >
+
+                    <div className="project-info">
+
+                      <div className="project-icon project-icon-blue">
+                        D
+                      </div>
+
+                      <div>
+
+                        <strong>
+                          Dashboard Redesign
+                        </strong>
+
+                        <span>
+                          UX & engineering
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <div className="project-progress">
+
+                      <div className="progress-label">
+
+                        <span>
+                          Progress
+                        </span>
+
+                        <strong>
+                          91%
+                        </strong>
+
+                      </div>
+
+                      <div className="progress-bar">
+                        <span
+                          style={{
+                            width: "91%",
+                          }}
+                        />
+                      </div>
+
+                    </div>
+
+                    <span className="project-status">
+                      Almost done
+                    </span>
+
+                  </button>
+
                 </div>
+              </section>
 
-                <span>
-                  AI ASSISTANT
+            </>
+          )}
+
+          {/* OTHER PAGES */}
+
+          {activePage !== "Overview" &&
+            activePage !== "Channel" && (
+              <section className="simple-dashboard-page">
+
+                <span className="dashboard-eyebrow">
+                  AKASPHERE
                 </span>
 
-              </div>
+                <h1>
+                  {activePage}
+                </h1>
 
-              <h2>
-                Your intelligent
-                <br />
-                workspace assistant.
-              </h2>
+                <p>
+                  {activePage === "Messages" &&
+                    "Your team conversations will appear here."}
+
+                  {activePage === "Team" &&
+                    "Manage your AkaSphere team members here."}
+
+                  {activePage === "Projects" &&
+                    "Create and manage your projects here."}
+
+                  {activePage === "AI Assistant" &&
+                    "Your AI-powered workspace assistant will live here."}
+
+                  {activePage === "Settings" &&
+                    "Manage your workspace and account settings here."}
+                </p>
+
+                <button
+                  type="button"
+                  className="dashboard-primary-button"
+                  onClick={() =>
+                    navigateTo("/dashboard")
+                  }
+                >
+                  <Home size={18} />
+
+                  Back to Overview
+                </button>
+
+              </section>
+            )}
+
+          {/* CHANNEL PAGE */}
+
+          {activePage === "Channel" && (
+            <section className="simple-dashboard-page">
+
+              <span className="dashboard-eyebrow">
+                CHANNEL
+              </span>
+
+              <h1>
+                #
+                {
+                  location.pathname.split(
+                    "/channels/",
+                  )[1]
+                }
+              </h1>
 
               <p>
-                Summarize conversations,
-                generate ideas, create
-                tasks and get answers
-                from your workspace.
+                Channel messages will appear
+                here. The channel navigation
+                is working correctly.
               </p>
 
               <button
                 type="button"
-                className="ai-action-button"
+                className="dashboard-primary-button"
                 onClick={() =>
-                  handleNavigation(
-                    "AI Assistant",
+                  navigateTo(
+                    "/dashboard/messages",
                   )
                 }
               >
-                <Bot size={17} />
+                <MessageSquare size={18} />
 
-                Open AI Assistant
+                Open Messages
               </button>
 
-              <div className="ai-suggestions">
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    console.log(
-                      "Summarize messages",
-                    )
-                  }
-                >
-                  Summarize today's
-                  messages
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    console.log(
-                      "Create project tasks",
-                    )
-                  }
-                >
-                  Create project tasks
-                </button>
-
-              </div>
-
-            </article>
-
-          </section>
-
-          {/* ==================================================
-              PROJECTS
-          =================================================== */}
-
-          <section className="dashboard-card projects-card">
-
-            <div className="card-header">
-
-              <div>
-
-                <h2>
-                  Active projects
-                </h2>
-
-                <p>
-                  Track what's currently
-                  being built.
-                </p>
-
-              </div>
-
-              <button
-                type="button"
-                className="card-link"
-                onClick={() =>
-                  console.log(
-                    "View projects clicked",
-                  )
-                }
-              >
-                View projects
-              </button>
-
-            </div>
-
-            <div className="project-list">
-
-              {/* Project 1 */}
-
-              <div className="project-row">
-
-                <div className="project-info">
-
-                  <div className="project-icon">
-                    A
-                  </div>
-
-                  <div>
-
-                    <strong>
-                      AkaSphere Platform
-                    </strong>
-
-                    <span>
-                      Product development
-                    </span>
-
-                  </div>
-
-                </div>
-
-                <div className="project-progress">
-
-                  <div className="progress-label">
-
-                    <span>
-                      Progress
-                    </span>
-
-                    <strong>
-                      78%
-                    </strong>
-
-                  </div>
-
-                  <div className="progress-bar">
-                    <span
-                      style={{
-                        width: "78%",
-                      }}
-                    />
-                  </div>
-
-                </div>
-
-                <span className="project-status">
-                  On track
-                </span>
-
-              </div>
-
-              {/* Project 2 */}
-
-              <div className="project-row">
-
-                <div className="project-info">
-
-                  <div className="project-icon project-icon-ai">
-                    <Sparkles
-                      size={17}
-                    />
-                  </div>
-
-                  <div>
-
-                    <strong>
-                      AI Assistant
-                    </strong>
-
-                    <span>
-                      Intelligence features
-                    </span>
-
-                  </div>
-
-                </div>
-
-                <div className="project-progress">
-
-                  <div className="progress-label">
-
-                    <span>
-                      Progress
-                    </span>
-
-                    <strong>
-                      54%
-                    </strong>
-
-                  </div>
-
-                  <div className="progress-bar">
-                    <span
-                      style={{
-                        width: "54%",
-                      }}
-                    />
-                  </div>
-
-                </div>
-
-                <span className="project-status">
-                  In progress
-                </span>
-
-              </div>
-
-              {/* Project 3 */}
-
-              <div className="project-row">
-
-                <div className="project-info">
-
-                  <div className="project-icon project-icon-blue">
-                    D
-                  </div>
-
-                  <div>
-
-                    <strong>
-                      Dashboard Redesign
-                    </strong>
-
-                    <span>
-                      UX & engineering
-                    </span>
-
-                  </div>
-
-                </div>
-
-                <div className="project-progress">
-
-                  <div className="progress-label">
-
-                    <span>
-                      Progress
-                    </span>
-
-                    <strong>
-                      91%
-                    </strong>
-
-                  </div>
-
-                  <div className="progress-bar">
-                    <span
-                      style={{
-                        width: "91%",
-                      }}
-                    />
-                  </div>
-
-                </div>
-
-                <span className="project-status">
-                  Almost done
-                </span>
-
-              </div>
-
-            </div>
-
-          </section>
+            </section>
+          )}
 
         </main>
-
       </div>
-
     </div>
   );
 }

@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import {
-  ArrowLeft,
   ArrowRight,
-  LockKeyhole,
+  Eye,
+  EyeOff,
+  Lock,
   Mail,
   Sparkles,
 } from "lucide-react";
@@ -14,29 +16,25 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail || !password) {
+    if (!email.trim() || !password) {
       setError("Please enter your email and password.");
       return;
     }
 
-    setLoading(true);
-
     try {
+      setLoading(true);
+
       const response = await api.post("/auth/login", {
-        email: normalizedEmail,
+        email: email.trim(),
         password,
       });
 
@@ -44,10 +42,6 @@ function Login() {
         access_token,
         refresh_token,
       } = response.data;
-
-      if (!access_token || !refresh_token) {
-        throw new Error("Invalid authentication response.");
-      }
 
       localStorage.setItem(
         "access_token",
@@ -62,27 +56,18 @@ function Login() {
       navigate("/dashboard", {
         replace: true,
       });
-    } catch (error: unknown) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error
-      ) {
-        const axiosError = error as {
-          response?: {
-            data?: {
-              detail?: string;
-            };
-          };
-        };
+    } catch (error: any) {
+      console.error("Login failed:", error);
 
-        setError(
-          axiosError.response?.data?.detail ||
-            "Invalid email or password.",
-        );
+      const status = error?.response?.status;
+
+      if (status === 401) {
+        setError("Invalid email or password.");
+      } else if (status === 422) {
+        setError("Please enter a valid email and password.");
       } else {
         setError(
-          "Unable to connect to the server. Please try again.",
+          "Unable to sign in. Please try again.",
         );
       }
     } finally {
@@ -92,126 +77,172 @@ function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
+      <div className="auth-background-glow auth-glow-one" />
+      <div className="auth-background-glow auth-glow-two" />
 
-        {/* Logo */}
+      <header className="auth-navbar">
         <Link
           to="/"
-          className="auth-logo"
+          className="auth-brand"
         >
-          <div className="logo-mark">
-            <Sparkles
-              size={19}
-              strokeWidth={2.5}
-            />
-          </div>
+          <span className="auth-brand-icon">
+            <Sparkles size={20} />
+          </span>
 
           <span>AkaSphere</span>
         </Link>
 
-        {/* Heading */}
-        <div className="auth-heading">
-          <h1>Welcome back</h1>
-
-          <p>
-            Sign in to continue to your workspace.
-          </p>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div
-            className="auth-error"
-            role="alert"
-          >
-            {error}
-          </div>
-        )}
-
-        {/* Login Form */}
-        <form onSubmit={handleSubmit}>
-
-          {/* Email */}
-          <label htmlFor="email">
-            Email
-          </label>
-
-          <div className="input-wrapper">
-            <Mail size={18} />
-
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
-              autoComplete="email"
-              disabled={loading}
-              required
-            />
-          </div>
-
-          {/* Password */}
-          <label htmlFor="password">
-            Password
-          </label>
-
-          <div className="input-wrapper">
-            <LockKeyhole size={18} />
-
-            <input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
-              autoComplete="current-password"
-              disabled={loading}
-              required
-            />
-          </div>
-
-          {/* Submit */}
-          <button
-            className="btn btn-primary auth-submit"
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? (
-              "Signing in..."
-            ) : (
-              <>
-                Sign in
-                <ArrowRight size={17} />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Register */}
-        <p className="auth-footer">
-          Don't have an account?{" "}
-          <Link to="/register">
-            Create one
-          </Link>
-        </p>
-
-        {/* Back */}
         <Link
-          className="back-home"
           to="/"
+          className="auth-back-home"
         >
-          <ArrowLeft size={15} />
-          Back to home
+          ← Back to home
         </Link>
+      </header>
 
-      </div>
+      <main className="auth-main">
+        <section className="auth-card">
+          <div className="auth-card-glow" />
+
+          <div className="auth-icon">
+            <Sparkles size={25} />
+          </div>
+
+          <div className="auth-heading">
+            <span className="auth-eyebrow">
+              WELCOME BACK
+            </span>
+
+            <h1>Sign in to AkaSphere</h1>
+
+            <p>
+              Continue to your workspace and
+              collaborate with your team.
+            </p>
+          </div>
+
+          {error && (
+            <div className="auth-error">
+              {error}
+            </div>
+          )}
+
+          <form
+            className="auth-form"
+            onSubmit={handleSubmit}
+          >
+            <div className="auth-field">
+              <label htmlFor="email">
+                Email
+              </label>
+
+              <div className="auth-input-wrapper">
+                <Mail size={18} />
+
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <div className="auth-label-row">
+                <label htmlFor="password">
+                  Password
+                </label>
+
+                <button
+                  type="button"
+                  className="forgot-button"
+                  onClick={() =>
+                    navigate("/verify-otp")
+                  }
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <div className="auth-input-wrapper">
+                <Lock size={18} />
+
+                <input
+                  id="password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowPassword(
+                      (previous) => !previous,
+                    )
+                  }
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="auth-spinner" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span />
+            <p>OR</p>
+            <span />
+          </div>
+
+          <p className="auth-register">
+            Don't have an account?{" "}
+            <Link to="/register">
+              Create one
+            </Link>
+          </p>
+        </section>
+      </main>
     </div>
   );
 }

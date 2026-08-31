@@ -1,138 +1,80 @@
-import { useState } from "react";
 import {
   ArrowRight,
+  Bot,
   CheckCircle2,
   Code2,
-  Menu,
   MessageSquare,
-  ShieldCheck,
   Sparkles,
   Users,
-  X,
   Zap,
 } from "lucide-react";
-import "./App.css";
 
-function App() {
-  const [menuOpen, setMenuOpen] = useState(false);
+import { useNavigate } from "react-router-dom";
 
-  const features = [
-    {
-      icon: MessageSquare,
-      title: "Real-time Collaboration",
-      description:
-        "Communicate with your team instantly through channels, messaging and live collaboration.",
-    },
-    {
-      icon: Sparkles,
-      title: "AI-Powered Workspace",
-      description:
-        "Use intelligent AI assistance to summarize conversations, generate ideas and improve productivity.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Secure by Design",
-      description:
-        "JWT authentication, protected APIs and production-ready security architecture.",
-    },
-    {
-      icon: Users,
-      title: "Team Management",
-      description:
-        "Create teams, manage members and organize your workspace from one place.",
-    },
-    {
-      icon: Zap,
-      title: "Fast & Scalable",
-      description:
-        "Built with FastAPI, PostgreSQL, Redis and Docker for reliable performance.",
-    },
-    {
-      icon: Code2,
-      title: "Developer Friendly",
-      description:
-        "Modern APIs, clean architecture, Docker support and an extensible codebase.",
-    },
-  ];
-
-  const closeMenu = () => {
-    setMenuOpen(false);
-  };
+function LandingPage() {
+  const navigate = useNavigate();
 
   return (
-    <div className="app">
-      {/* ==================== NAVBAR ==================== */}
+    <div className="landing-page">
+      {/* =====================================================
+          NAVBAR
+      ====================================================== */}
 
-      <header className="navbar">
-        <div className="nav-container">
-          <a href="#home" className="logo" onClick={closeMenu}>
-            <div className="logo-mark">
-              <Sparkles size={19} strokeWidth={2.5} />
-            </div>
+      <header className="landing-navbar">
+        <button
+          type="button"
+          className="landing-logo"
+          onClick={() => navigate("/")}
+        >
+          <span className="landing-logo-icon">
+            <Sparkles size={21} />
+          </span>
 
-            <span>AkaSphere</span>
-          </a>
+          <span>AkaSphere</span>
+        </button>
 
-          <nav className={`nav-links ${menuOpen ? "open" : ""}`}>
-            <a href="#home" onClick={closeMenu}>
-              Home
-            </a>
+        <nav className="landing-nav-links">
+          <a href="#home">Home</a>
+          <a href="#features">Features</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </nav>
 
-            <a href="#features" onClick={closeMenu}>
-              Features
-            </a>
-
-            <a href="#about" onClick={closeMenu}>
-              About
-            </a>
-
-            <a href="#contact" onClick={closeMenu}>
-              Contact
-            </a>
-
-            <div className="mobile-actions">
-              <button className="btn btn-secondary" type="button">
-                Log in
-              </button>
-
-              <button className="btn btn-primary" type="button">
-                Get Started
-              </button>
-            </div>
-          </nav>
-
-          <div className="desktop-actions">
-            <button className="btn btn-secondary" type="button">
-              Log in
-            </button>
-
-            <button className="btn btn-primary" type="button">
-              Get Started
-              <ArrowRight size={16} />
-            </button>
-          </div>
+        <div className="landing-nav-actions">
+          <button
+            type="button"
+            className="landing-login-button"
+            onClick={() => navigate("/login")}
+          >
+            Log in
+          </button>
 
           <button
-            className="menu-button"
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label="Toggle navigation menu"
-            aria-expanded={menuOpen}
+            className="landing-primary-button"
+            onClick={() => navigate("/register")}
           >
-            {menuOpen ? <X size={25} /> : <Menu size={25} />}
+            Get Started
+            <ArrowRight size={17} />
           </button>
         </div>
       </header>
 
+      {/* =====================================================
+          HERO
+      ====================================================== */}
+
       <main>
-        {/* ==================== HERO ==================== */}
+        <section
+          id="home"
+          className="landing-hero"
+        >
+          <div className="hero-glow hero-glow-one" />
+          <div className="hero-glow hero-glow-two" />
 
-        <section id="home" className="hero-section">
-          <div className="hero-background" />
-
-          <div className="hero-container">
+          <div className="hero-content">
             <div className="hero-badge">
-              <span className="badge-dot" />
+              <span className="hero-badge-dot" />
               AI-powered collaboration platform
             </div>
 
@@ -142,379 +84,384 @@ function App() {
               <span>Build smarter.</span>
             </h1>
 
-            <p className="hero-description">
-              AkaSphere brings communication, collaboration and AI-powered
-              productivity into one modern workspace built for ambitious teams.
+            <p>
+              AkaSphere brings communication,
+              collaboration and AI-powered productivity
+              into one modern workspace built for
+              ambitious teams.
             </p>
 
             <div className="hero-actions">
-              <button className="btn btn-primary btn-large" type="button">
+              <button
+                type="button"
+                className="hero-primary-button"
+                onClick={() => navigate("/register")}
+              >
                 Start Building
-                <ArrowRight size={19} />
+                <ArrowRight size={18} />
               </button>
 
-              <button className="btn btn-outline btn-large" type="button">
-                <Code2 size={18} />
+              <button
+                type="button"
+                className="hero-secondary-button"
+                onClick={() => {
+                  document
+                    .getElementById("features")
+                    ?.scrollIntoView({
+                      behavior: "smooth",
+                    });
+                }}
+              >
+                <Code2 size={17} />
                 Explore Platform
               </button>
             </div>
 
             <div className="hero-trust">
-              <div className="trust-item">
-                <CheckCircle2 size={17} />
+              <span>
+                <CheckCircle2 size={16} />
                 Production-ready architecture
-              </div>
+              </span>
 
-              <div className="trust-item">
-                <CheckCircle2 size={17} />
+              <span>
+                <CheckCircle2 size={16} />
                 Secure authentication
-              </div>
+              </span>
 
-              <div className="trust-item">
-                <CheckCircle2 size={17} />
+              <span>
+                <CheckCircle2 size={16} />
                 Dockerized infrastructure
-              </div>
-            </div>
-
-            {/* ==================== DASHBOARD PREVIEW ==================== */}
-
-            <div className="dashboard-wrapper">
-              <div className="dashboard-glow" />
-
-              <div className="dashboard">
-                <div className="dashboard-topbar">
-                  <div className="window-controls">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-
-                  <div className="dashboard-title">
-                    AkaSphere Workspace
-                  </div>
-
-                  <div className="status-indicator">
-                    <span />
-                    Live
-                  </div>
-                </div>
-
-                <div className="dashboard-content">
-                  {/* Sidebar */}
-
-                  <aside className="dashboard-sidebar">
-                    <div className="workspace-name">
-                      <div className="workspace-icon">A</div>
-
-                      <div>
-                        <strong>AkaSphere</strong>
-                        <small>Workspace</small>
-                      </div>
-                    </div>
-
-                    <div className="sidebar-section">
-                      <span className="sidebar-label">WORKSPACE</span>
-
-                      <div className="sidebar-item active">
-                        <MessageSquare size={15} />
-                        General
-                      </div>
-
-                      <div className="sidebar-item">
-                        <Users size={15} />
-                        Team
-                      </div>
-
-                      <div className="sidebar-item">
-                        <Sparkles size={15} />
-                        AI Assistant
-                      </div>
-                    </div>
-
-                    <div className="sidebar-section">
-                      <span className="sidebar-label">CHANNELS</span>
-
-                      <div className="sidebar-item">
-                        # engineering
-                      </div>
-
-                      <div className="sidebar-item">
-                        # design
-                      </div>
-
-                      <div className="sidebar-item">
-                        # projects
-                      </div>
-                    </div>
-                  </aside>
-
-                  {/* Main Chat */}
-
-                  <div className="dashboard-main">
-                    <div className="chat-header">
-                      <div>
-                        <h3># General</h3>
-                        <p>Team communication</p>
-                      </div>
-
-                      <div className="online-users">
-                        <span />
-                        8 online
-                      </div>
-                    </div>
-
-                    <div className="messages">
-                      <div className="message">
-                        <div className="avatar avatar-purple">A</div>
-
-                        <div className="message-body">
-                          <div className="message-meta">
-                            <strong>Akash</strong>
-                            <span>10:42 AM</span>
-                          </div>
-
-                          <p>
-                            Welcome to the AkaSphere workspace! 🚀
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="message">
-                        <div className="avatar avatar-blue">R</div>
-
-                        <div className="message-body">
-                          <div className="message-meta">
-                            <strong>Rahul</strong>
-                            <span>10:43 AM</span>
-                          </div>
-
-                          <p>
-                            The new collaboration dashboard looks amazing.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="ai-message">
-                        <div className="ai-icon">
-                          <Sparkles size={15} />
-                        </div>
-
-                        <div>
-                          <div className="ai-title">
-                            AI Assistant
-                          </div>
-
-                          <p>
-                            I can summarize your conversation, create tasks
-                            and help your team move faster.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="chat-input">
-                      <span>Message #general...</span>
-
-                      <button type="button" aria-label="Send message">
-                        <ArrowRight size={17} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              </span>
             </div>
           </div>
-        </section>
 
-        {/* ==================== FEATURES ==================== */}
+          {/* =================================================
+              PRODUCT PREVIEW
+          ================================================= */}
 
-        <section id="features" className="features-section">
-          <div className="section-container">
-            <div className="section-heading">
-              <div className="section-badge">
-                <Sparkles size={15} />
-                Powerful by default
+          <div className="hero-preview">
+            <div className="preview-top">
+              <div className="preview-dots">
+                <span />
+                <span />
+                <span />
               </div>
 
-              <h2>
-                Everything your team needs
-                <br />
-                <span>in one workspace.</span>
-              </h2>
+              <span className="preview-title">
+                AkaSphere Workspace
+              </span>
 
-              <p>
-                A modern collaboration platform designed with scalable
-                engineering principles from the ground up.
-              </p>
+              <span className="preview-live">
+                <span />
+                Live
+              </span>
             </div>
 
-            <div className="features-grid">
-              {features.map((feature) => {
-                const Icon = feature.icon;
+            <div className="preview-body">
+              <aside className="preview-sidebar">
+                <div className="preview-brand">
+                  <div className="preview-brand-icon">
+                    A
+                  </div>
 
-                return (
-                  <article
-                    className="feature-card"
-                    key={feature.title}
+                  <div>
+                    <strong>AkaSphere</strong>
+                    <span>Workspace</span>
+                  </div>
+                </div>
+
+                <div className="preview-section-title">
+                  WORKSPACE
+                </div>
+
+                <div className="preview-menu active">
+                  <MessageSquare size={15} />
+                  General
+                </div>
+
+                <div className="preview-menu">
+                  <Users size={15} />
+                  Team
+                </div>
+
+                <div className="preview-menu">
+                  <Bot size={15} />
+                  AI Assistant
+                </div>
+
+                <div className="preview-section-title">
+                  CHANNELS
+                </div>
+
+                <div className="preview-channel">
+                  # engineering
+                </div>
+
+                <div className="preview-channel">
+                  # design
+                </div>
+
+                <div className="preview-channel">
+                  # projects
+                </div>
+              </aside>
+
+              <div className="preview-main">
+                <div className="preview-main-heading">
+                  <div>
+                    <span>YOUR WORKSPACE</span>
+
+                    <h3>
+                      Good morning, Akash 👋
+                    </h3>
+
+                    <p>
+                      Here's what's happening
+                      across your workspace.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate("/register")
+                    }
                   >
-                    <div className="feature-icon">
-                      <Icon size={22} />
+                    <Zap size={15} />
+                    New project
+                  </button>
+                </div>
+
+                <div className="preview-stats">
+                  <div>
+                    <MessageSquare size={17} />
+                    <strong>128</strong>
+                    <span>Messages</span>
+                  </div>
+
+                  <div>
+                    <Users size={17} />
+                    <strong>24</strong>
+                    <span>Team members</span>
+                  </div>
+
+                  <div>
+                    <Zap size={17} />
+                    <strong>12</strong>
+                    <span>Projects</span>
+                  </div>
+
+                  <div>
+                    <Sparkles size={17} />
+                    <strong>94%</strong>
+                    <span>AI productivity</span>
+                  </div>
+                </div>
+
+                <div className="preview-cards">
+                  <div className="preview-card">
+                    <span>RECENT CONVERSATIONS</span>
+
+                    <div className="preview-message">
+                      <div>R</div>
+                      <p>
+                        The new collaboration
+                        dashboard looks amazing.
+                      </p>
                     </div>
 
-                    <h3>{feature.title}</h3>
-
-                    <p>{feature.description}</p>
-
-                    <a href="#about">
-                      Learn more
-                      <ArrowRight size={15} />
-                    </a>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ==================== ABOUT ==================== */}
-
-        <section id="about" className="about-section">
-          <div className="section-container">
-            <div className="about-card">
-              <div className="about-content">
-                <div className="section-badge">
-                  <Code2 size={15} />
-                  Built for developers
-                </div>
-
-                <h2>
-                  Engineering-first.
-                  <br />
-                  <span>Built to scale.</span>
-                </h2>
-
-                <p>
-                  AkaSphere combines a modern React frontend with a FastAPI
-                  backend, PostgreSQL database, Redis and Docker-based
-                  infrastructure.
-                </p>
-
-                <div className="tech-list">
-                  <div>
-                    <CheckCircle2 size={17} />
-                    FastAPI REST APIs
+                    <div className="preview-message">
+                      <div>P</div>
+                      <p>
+                        I've uploaded the latest
+                        design files.
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <CheckCircle2 size={17} />
-                    PostgreSQL + SQLAlchemy
+                  <div className="preview-ai">
+                    <Sparkles size={22} />
+
+                    <span>AI ASSISTANT</span>
+
+                    <h4>
+                      Your intelligent
+                      workspace assistant.
+                    </h4>
+
+                    <p>
+                      Summarize conversations,
+                      generate ideas and get
+                      answers from your workspace.
+                    </p>
                   </div>
-
-                  <div>
-                    <CheckCircle2 size={17} />
-                    Redis-powered services
-                  </div>
-
-                  <div>
-                    <CheckCircle2 size={17} />
-                    Docker & Nginx
-                  </div>
-                </div>
-              </div>
-
-              <div className="architecture">
-                <div className="architecture-card">
-                  <span>CLIENT</span>
-                  <strong>React + TypeScript</strong>
-                </div>
-
-                <ArrowRight
-                  className="architecture-arrow"
-                  size={20}
-                />
-
-                <div className="architecture-card highlight">
-                  <span>API</span>
-                  <strong>FastAPI</strong>
-                </div>
-
-                <ArrowRight
-                  className="architecture-arrow"
-                  size={20}
-                />
-
-                <div className="architecture-card">
-                  <span>DATA</span>
-                  <strong>PostgreSQL</strong>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ==================== CTA ==================== */}
+        {/* =====================================================
+            FEATURES
+        ====================================================== */}
 
-        <section id="contact" className="cta-section">
-          <div className="cta-container">
-            <div className="cta-icon">
-              <Sparkles size={25} />
-            </div>
+        <section
+          id="features"
+          className="landing-section"
+        >
+          <div className="section-heading">
+            <span>FEATURES</span>
 
             <h2>
-              Ready to build something
+              Everything your team
               <br />
-              <span>extraordinary?</span>
+              needs to move faster.
             </h2>
 
             <p>
-              Start your journey with AkaSphere and bring your team,
-              technology and ideas together.
+              A unified workspace designed for
+              communication, productivity and
+              intelligent collaboration.
+            </p>
+          </div>
+
+          <div className="feature-grid">
+            <article className="feature-card">
+              <div className="feature-icon">
+                <MessageSquare size={22} />
+              </div>
+
+              <h3>Team Communication</h3>
+
+              <p>
+                Organize conversations into channels
+                and keep your team aligned.
+              </p>
+            </article>
+
+            <article className="feature-card">
+              <div className="feature-icon">
+                <Bot size={22} />
+              </div>
+
+              <h3>AI Assistant</h3>
+
+              <p>
+                Turn conversations into summaries,
+                ideas, tasks and useful answers.
+              </p>
+            </article>
+
+            <article className="feature-card">
+              <div className="feature-icon">
+                <Users size={22} />
+              </div>
+
+              <h3>Team Collaboration</h3>
+
+              <p>
+                Manage your workspace, members,
+                projects and permissions.
+              </p>
+            </article>
+
+            <article className="feature-card">
+              <div className="feature-icon">
+                <Zap size={22} />
+              </div>
+
+              <h3>Production Ready</h3>
+
+              <p>
+                Built with modern backend,
+                frontend, database and Docker
+                infrastructure.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        {/* =====================================================
+            ABOUT
+        ====================================================== */}
+
+        <section
+          id="about"
+          className="landing-about"
+        >
+          <div>
+            <span>ABOUT AKASPHERE</span>
+
+            <h2>
+              One workspace.
+              <br />
+              Infinite possibilities.
+            </h2>
+          </div>
+
+          <p>
+            AkaSphere is designed as a modern
+            collaboration platform where teams can
+            communicate, manage projects and use AI
+            without switching between multiple tools.
+          </p>
+        </section>
+
+        {/* =====================================================
+            CTA
+        ====================================================== */}
+
+        <section
+          id="contact"
+          className="landing-cta"
+        >
+          <div>
+            <span>
+              <Sparkles size={17} />
+              READY TO BUILD?
+            </span>
+
+            <h2>
+              Build your workspace
+              <br />
+              with AkaSphere.
+            </h2>
+
+            <p>
+              Create your account and start
+              collaborating.
             </p>
 
-            <button className="btn btn-primary btn-large" type="button">
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+            >
               Get Started
-              <ArrowRight size={19} />
+              <ArrowRight size={18} />
             </button>
           </div>
         </section>
       </main>
 
-      {/* ==================== FOOTER ==================== */}
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
 
-      <footer className="footer">
-        <div className="footer-container">
-          <div className="footer-brand">
-            <div className="logo">
-              <div className="logo-mark">
-                <Sparkles size={17} />
-              </div>
+      <footer className="landing-footer">
+        <div>
+          <strong>AkaSphere</strong>
 
-              <span>AkaSphere</span>
-            </div>
-
-            <p>
-              Intelligent collaboration for modern teams.
-            </p>
-          </div>
-
-          <div className="footer-links">
-            <a href="#home">Home</a>
-            <a href="#features">Features</a>
-            <a href="#about">About</a>
-            <a href="#contact">Contact</a>
-          </div>
-
-          <div className="footer-bottom">
-            <span>© 2026 AkaSphere. All rights reserved.</span>
-
-            <span className="built-with">
-              Built with <Zap size={13} /> modern technology
-            </span>
-          </div>
+          <span>
+            AI-powered collaboration platform.
+          </span>
         </div>
+
+        <span>
+          © {new Date().getFullYear()} AkaSphere
+        </span>
       </footer>
     </div>
   );
 }
 
-export default App;
+export default LandingPage;

@@ -11,15 +11,18 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_version: str = "0.1.0"
 
+    # PostgreSQL
     postgres_db: str
     postgres_user: str
     postgres_password: str
     postgres_host: str = "localhost"
     postgres_port: int = 5432
 
+    # Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
 
+    # JWT
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
@@ -27,9 +30,13 @@ class Settings(BaseSettings):
 
     # Email / SMTP
     smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
+
+    # Gmail SSL SMTP
+    smtp_port: int = 465
+
     smtp_username: str
     smtp_password: str
+
     email_from: str
     email_from_name: str = "AkaSphere"
 
