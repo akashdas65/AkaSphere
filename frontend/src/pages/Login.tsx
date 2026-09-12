@@ -20,7 +20,9 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
     setError("");
@@ -34,7 +36,7 @@ function Login() {
       setLoading(true);
 
       const response = await api.post("/auth/login", {
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -64,7 +66,9 @@ function Login() {
       if (status === 401) {
         setError("Invalid email or password.");
       } else if (status === 422) {
-        setError("Please enter a valid email and password.");
+        setError(
+          "Please enter a valid email and password.",
+        );
       } else {
         setError(
           "Unable to sign in. Please try again.",
@@ -81,10 +85,7 @@ function Login() {
       <div className="auth-background-glow auth-glow-two" />
 
       <header className="auth-navbar">
-        <Link
-          to="/"
-          className="auth-brand"
-        >
+        <Link to="/" className="auth-brand">
           <span className="auth-brand-icon">
             <Sparkles size={20} />
           </span>
@@ -102,112 +103,106 @@ function Login() {
 
       <main className="auth-main">
         <section className="auth-card">
-          <div className="auth-card-glow" />
+          <div className="auth-logo">
+            <div className="logo-mark">
+              <Sparkles
+                size={19}
+                strokeWidth={2.5}
+              />
+            </div>
 
-          <div className="auth-icon">
-            <Sparkles size={25} />
+            <span>AkaSphere</span>
           </div>
 
           <div className="auth-heading">
-            <span className="auth-eyebrow">
-              WELCOME BACK
-            </span>
-
-            <h1>Sign in to AkaSphere</h1>
+            <h1>Welcome back</h1>
 
             <p>
-              Continue to your workspace and
-              collaborate with your team.
+              Sign in to continue to your workspace.
             </p>
           </div>
 
           {error && (
-            <div className="auth-error">
+            <div
+              className="auth-error"
+              role="alert"
+            >
               {error}
             </div>
           )}
 
-          <form
-            className="auth-form"
-            onSubmit={handleSubmit}
-          >
-            <div className="auth-field">
-              <label htmlFor="email">
-                Email
-              </label>
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="login-email">
+              Email
+            </label>
 
-              <div className="auth-input-wrapper">
-                <Mail size={18} />
+            <div className="auth-input-wrapper">
+              <Mail size={18} />
 
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) =>
-                    setEmail(event.target.value)
-                  }
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                />
-              </div>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
+                placeholder="you@example.com"
+                autoComplete="email"
+                disabled={loading}
+                required
+              />
             </div>
 
-            <div className="auth-field">
-              <div className="auth-label-row">
-                <label htmlFor="password">
-                  Password
-                </label>
+            <div className="auth-password-label">
+              <label htmlFor="login-password">
+                Password
+              </label>
 
-                <button
-                  type="button"
-                  className="forgot-button"
-                  onClick={() =>
-                    navigate("/verify-otp")
-                  }
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <Link to="/forgot-password">
+                Forgot password?
+              </Link>
+            </div>
 
-              <div className="auth-input-wrapper">
-                <Lock size={18} />
+            <div className="auth-input-wrapper">
+              <Lock size={18} />
 
-                <input
-                  id="password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  value={password}
-                  onChange={(event) =>
-                    setPassword(event.target.value)
-                  }
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                />
+              <input
+                id="login-password"
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
+                value={password}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                disabled={loading}
+                required
+              />
 
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() =>
-                    setShowPassword(
-                      (previous) => !previous,
-                    )
-                  }
-                  aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                >
-                  {showPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() =>
+                  setShowPassword(
+                    (previous) => !previous,
+                  )
+                }
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+                {showPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
+              </button>
             </div>
 
             <button

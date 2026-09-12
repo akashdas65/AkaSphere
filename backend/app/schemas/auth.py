@@ -42,6 +42,7 @@ class VerifyOTPRequest(BaseModel):
         max_length=6,
         pattern=r"^\d{6}$",
     )
+    purpose: str = "registration"
 
 
 class ForgotPasswordRequest(BaseModel):

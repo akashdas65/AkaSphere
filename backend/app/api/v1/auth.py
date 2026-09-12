@@ -215,7 +215,6 @@ async def send_otp(
 
     except Exception as exc:
         # If email sending fails, remove the OTP
-        # so the user cannot verify with an undelivered code.
         redis_client.delete(
             otp_service._otp_key(email)
         )
@@ -226,7 +225,10 @@ async def send_otp(
 
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Unable to send verification email. Please try again later.",
+            detail=(
+                "Unable to send verification email. "
+                "Please try again later."
+            ),
         ) from exc
 
     return {
@@ -236,7 +238,7 @@ async def send_otp(
 
 
 # ============================================================
-# VERIFY EMAIL OTP
+# VERIFY OTP
 # ============================================================
 
 @router.post(
@@ -252,15 +254,56 @@ def verify_otp(
 
     otp_service = OTPService(redis_client)
 
-    # Verify OTP
+    # --------------------------------------------------------
+    # Password reset:
+    #
+    # Do NOT consume the OTP here.
+    #
+    # The OTP must still exist when /reset-password is called.
+    # --------------------------------------------------------
+
+    is_password_reset = (
+        data.purpose == "password-reset"
+    )
+
     if not otp_service.verify_otp(
         email=email,
         otp=data.otp,
+        consume=not is_password_reset,
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP",
         )
+
+    # --------------------------------------------------------
+    # PASSWORD RESET OTP
+    # --------------------------------------------------------
+    #
+    # Do NOT mark the user's email as verified here.
+    # /reset-password will consume the OTP after successful
+    # password change.
+    #
+
+    if is_password_reset:
+        repository = UserRepository(db)
+
+        user = repository.get_by_email(email)
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid password reset request",
+            )
+
+        return {
+            "message": "Password reset OTP verified successfully",
+            "email": email,
+        }
+
+    # --------------------------------------------------------
+    # REGISTRATION OTP
+    # --------------------------------------------------------
 
     repository = UserRepository(db)
 
@@ -356,10 +399,17 @@ def reset_password(
 
     email = str(data.email).lower()
 
-    # Verify password-reset OTP
+    # --------------------------------------------------------
+    # Verify and CONSUME the password-reset OTP.
+    #
+    # verify-otp used consume=False.
+    # Now the OTP is consumed here.
+    # --------------------------------------------------------
+
     if not otp_service.verify_otp(
         email=email,
         otp=data.otp,
+        consume=True,
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -43,9 +43,11 @@ class OTPService:
         self,
         email: str,
         otp: str,
+        consume: bool = True,
     ) -> bool:
         email = email.lower()
 
+        # Check maximum failed attempts
         attempts = self.redis.get(
             self._attempt_key(email)
         )
@@ -56,6 +58,7 @@ class OTPService:
         ):
             return False
 
+        # Get stored OTP
         stored_otp = self.redis.get(
             self._otp_key(email)
         )
@@ -63,18 +66,21 @@ class OTPService:
         if stored_otp is None:
             return False
 
+        # Verify OTP
         if stored_otp != otp:
             self.redis.incr(
                 self._attempt_key(email)
             )
             return False
 
-        self.redis.delete(
-            self._otp_key(email)
-        )
+        # Consume OTP only when requested
+        if consume:
+            self.redis.delete(
+                self._otp_key(email)
+            )
 
-        self.redis.delete(
-            self._attempt_key(email)
-        )
+            self.redis.delete(
+                self._attempt_key(email)
+            )
 
         return True

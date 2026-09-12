@@ -9,25 +9,53 @@ import LandingPage from "./LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyOTP from "./pages/VerifyOTP";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        {/* Landing */}
+        <Route
+          path="/"
+          element={<LandingPage />}
+        />
 
-        <Route path="/login" element={<Login />} />
+        {/* Authentication */}
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/register"
+          element={<Register />}
+        />
 
-        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route
+          path="/verify-otp"
+          element={<VerifyOTP />}
+        />
 
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={<ResetPassword />}
+        />
+
+        {/* Dashboard */}
         <Route
           path="/dashboard/*"
           element={<Dashboard />}
         />
 
+        {/* Unknown route */}
         <Route
           path="*"
           element={

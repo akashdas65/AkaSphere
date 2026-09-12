@@ -85,8 +85,10 @@
     container_name: akasphere-frontend
     restart: unless-stopped
 
-    ports:
-      - "5173:80"
+    # Frontend is accessible internally by Nginx.
+    # Do NOT expose port 5173 from Docker.
+    expose:
+      - "80"
 
     depends_on:
       backend:
